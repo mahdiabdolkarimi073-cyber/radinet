@@ -1,0 +1,3 @@
+import { Body, Controller, Get, Post } from '@nestjs/common'; import { IsEmail, IsOptional, IsString, Length } from 'class-validator'; import { PrismaService } from './prisma.service';
+class ConsultationDto { @IsString() @Length(2,80) name!: string; @IsString() @Length(7,30) phone!: string; @IsOptional() @IsEmail() email?: string; @IsOptional() @IsString() @Length(0,1000) message?: string; }
+@Controller('consultations') export class ConsultationController { constructor(private readonly prisma:PrismaService) {} @Post() create(@Body() body:ConsultationDto){return this.prisma.consultationRequest.create({data:body});} @Get() list(){return this.prisma.consultationRequest.findMany({orderBy:{createdAt:'desc'}});} }

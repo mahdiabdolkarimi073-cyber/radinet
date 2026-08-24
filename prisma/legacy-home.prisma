@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model HomeSlide {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title         String
+  subtitle      String
+  description   String   @default("")
+  imageUrl      String   @map("image_url")
+  primaryCta    String   @default("خدمات ما") @map("primary_cta")
+  secondaryCta  String   @default("درباره ما") @map("secondary_cta")
+  displayOrder  Int      @default(0) @map("display_order")
+  isPublished   Boolean  @default(true) @map("is_published")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("home_slides")
+}
+
+model HomeService {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  description  String   @default("")
+  iconKey      String   @default("services") @map("icon_key")
+  colorTheme   String   @default("blue") @map("color_theme")
+  ctaLabel     String   @default("مشاهده خدمات") @map("cta_label")
+  displayOrder Int      @default(0) @map("display_order")
+  isPublished  Boolean  @default(true) @map("is_published")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("home_services")
+}
+
+model HomeStat {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  label        String
+  value        String
+  iconKey      String   @default("activity") @map("icon_key")
+  displayOrder Int      @default(0) @map("display_order")
+  isPublished  Boolean  @default(true) @map("is_published")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("home_stats")
+}
+
+model HomeNews {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title        String
+  dateLabel    String   @map("date_label")
+  imageUrl     String   @map("image_url")
+  displayOrder Int      @default(0) @map("display_order")
+  isPublished  Boolean  @default(true) @map("is_published")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("home_news")
+}
+
+model SiteSetting {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  settingKey   String   @unique @map("setting_key")
+  settingValue Json     @default("{}") @map("setting_value")
+  updatedAt    DateTime @default(now()) @map("updated_at")
+
+  @@map("site_settings")
+}
