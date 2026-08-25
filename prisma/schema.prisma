@@ -111,3 +111,131 @@ model ConsultationRequest {
   @@index([status, createdAt])
   @@map("consultation_requests")
 }
+
+model ContactMessage {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  email String
+  phone String
+  subject String
+  message String @db.Text
+  status String @default("new")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@index([status, createdAt])
+  @@map("contact_messages")
+}
+
+model ContactPageContent {
+  id String @id @default(uuid()) @db.Uuid
+  heroTitle String @default("تماس با ما") @map("hero_title")
+  heroSubtitle String @default("با ما در ارتباط باشید") @map("hero_subtitle")
+  introTitle String @default("اطلاعات تماس") @map("intro_title")
+  introBody String @default("") @map("intro_body")
+  officeAddress String @default("") @map("office_address")
+  latitude Decimal? @db.Decimal(10, 7)
+  longitude Decimal? @db.Decimal(10, 7)
+  mapUrl String? @map("map_url")
+  responseHours String @default("") @map("response_hours")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("contact_page_content")
+}
+
+model ContactPhoneNumber {
+  id String @id @default(uuid()) @db.Uuid
+  label String @default("پشتیبانی")
+  phone String
+  isActive Boolean @default(true) @map("is_active")
+  displayOrder Int @default(0) @map("display_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@index([isActive, displayOrder])
+  @@map("contact_phone_numbers")
+}
+
+model ContactSupportEmail {
+  id String @id @default(uuid()) @db.Uuid
+  label String @default("ایمیل پشتیبانی")
+  email String
+  isActive Boolean @default(true) @map("is_active")
+  displayOrder Int @default(0) @map("display_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@index([isActive, displayOrder])
+  @@map("contact_support_emails")
+}
+
+model ContactResponseHour {
+  id String @id @default(uuid()) @db.Uuid
+  dayLabel String @map("day_label")
+  hours String
+  isActive Boolean @default(true) @map("is_active")
+  displayOrder Int @default(0) @map("display_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@index([isActive, displayOrder])
+  @@map("contact_response_hours")
+}
+
+model LegalDocument {
+  id String @id @default(uuid()) @db.Uuid
+  documentType String @map("document_type")
+  title String
+  content String @db.Text
+  versionNumber Int @default(1) @map("version_number")
+  effectiveDate DateTime @default(now()) @map("effective_date")
+  isActive Boolean @default(true) @map("is_active")
+  scheduledPublishDate DateTime? @map("scheduled_publish_date")
+  lastUpdated DateTime @default(now()) @map("last_updated")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([documentType, isActive])
+  @@map("legal_documents")
+}
+
+model LegalDocumentVersion {
+  id String @id @default(uuid()) @db.Uuid
+  documentId String @map("document_id")
+  documentType String @map("document_type")
+  title String
+  content String @db.Text
+  versionNumber Int @map("version_number")
+  effectiveDate DateTime @map("effective_date")
+  archivedAt DateTime @default(now()) @map("archived_at")
+  @@index([documentId])
+  @@map("legal_document_versions")
+}
+
+model LegalChangeLog {
+  id String @id @default(uuid()) @db.Uuid
+  documentId String? @map("document_id")
+  documentType String? @map("document_type")
+  actor String @default("admin")
+  action String
+  summary String? @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([documentId, createdAt])
+  @@map("legal_change_logs")
+}
+
+model LegalConsent {
+  id String @id @default(uuid()) @db.Uuid
+  userIdentifier String @map("user_identifier")
+  documentType String @map("document_type")
+  documentVersion Int @map("document_version")
+  acceptedAt DateTime @default(now()) @map("accepted_at")
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+  @@index([userIdentifier, documentType])
+  @@map("legal_consents")
+}
+
+model LegalViewLog {
+  id String @id @default(uuid()) @db.Uuid
+  viewerIdentifier String? @map("viewer_identifier")
+  documentType String @map("document_type")
+  viewedAt DateTime @default(now()) @map("viewed_at")
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+  @@index([documentType, viewedAt])
+  @@map("legal_view_logs")
+}
