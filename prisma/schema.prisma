@@ -239,3 +239,114 @@ model LegalViewLog {
   @@index([documentType, viewedAt])
   @@map("legal_view_logs")
 }
+
+// ── Shop ──
+
+model ShopCategory {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String
+  slug String @unique
+  description String @default("")
+  iconKey String @default("imaging-equipment") @map("icon_key")
+  colorTheme String @default("blue") @map("color_theme")
+  parentId String? @map("parent_id") @db.Uuid
+  isActive Boolean @default(true) @map("is_active")
+  displayOrder Int @default(0) @map("display_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent ShopCategory? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children ShopCategory[] @relation("CategoryHierarchy")
+  products ShopProduct[]
+
+  @@index([parentId, displayOrder])
+  @@map("shop_categories")
+}
+
+model ShopProduct {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String
+  slug String @unique
+  description String @default("") @db.Text
+  shortDescription String @default("") @map("short_description")
+  categoryId String? @map("category_id")
+  brand String @default("")
+  sku String @default("") @unique
+  price Decimal @db.Decimal(14, 0)
+  oldPrice Decimal? @map("old_price") @db.Decimal(14, 0)
+  discountPercent Int @default(0) @map("discount_percent")
+  stock Int @default(0)
+  reservedStock Int @default(0) @map("reserved_stock")
+  imageUrl String @default("") @map("image_url")
+  gallery Json @default("[]")
+  isActive Boolean @default(true) @map("is_active")
+  isFeatured Boolean @default(false) @map("is_featured")
+  rating Float @default(0)
+  reviewCount Int @default(0) @map("review_count")
+  salesCount Int @default(0) @map("sales_count")
+  attributes Json @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  category ShopCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems ShopOrderItem[]
+  @@index([categoryId, isActive])
+  @@index([isFeatured, isActive])
+  @@index([slug])
+  @@map("shop_products")
+}
+
+model ShopOrder {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderNumber String @unique @map("order_number")
+  customerName String @map("customer_name")
+  customerPhone String @map("customer_phone")
+  customerEmail String? @map("customer_email")
+  shippingAddress String @default("") @db.Text @map("shipping_address")
+  notes String? @db.Text
+  subtotal Decimal @db.Decimal(14, 0)
+  discountTotal Decimal @default(0) @db.Decimal(14, 0) @map("discount_total")
+  shippingCost Decimal @default(0) @db.Decimal(14, 0) @map("shipping_cost")
+  total Decimal @db.Decimal(14, 0)
+  status String @default("pending")
+  paymentStatus String @default("unpaid") @map("payment_status")
+  paymentReference String? @map("payment_reference")
+  trackingCode String? @map("tracking_code")
+  items ShopOrderItem[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@index([status, createdAt])
+  @@index([customerPhone])
+  @@map("shop_orders")
+}
+
+model ShopOrderItem {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId String @map("order_id")
+  productId String @map("product_id")
+  productName String @map("product_name")
+  unitPrice Decimal @db.Decimal(14, 0) @map("unit_price")
+  quantity Int
+  lineTotal Decimal @db.Decimal(14, 0) @map("line_total")
+  order ShopOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product ShopProduct @relation(fields: [productId], references: [id])
+  @@index([orderId])
+  @@index([productId])
+  @@map("shop_order_items")
+}
+
+model ShopDiscount {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code String @unique
+  description String @default("")
+  type String @default("percent")
+  value Decimal @db.Decimal(10, 2)
+  minOrderAmount Decimal? @map("min_order_amount") @db.Decimal(14, 0)
+  maxDiscountAmount Decimal? @map("max_discount_amount") @db.Decimal(14, 0)
+  usageLimit Int? @map("usage_limit")
+  usedCount Int @default(0) @map("used_count")
+  startsAt DateTime? @map("starts_at")
+  endsAt DateTime? @map("ends_at")
+  isActive Boolean @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("shop_discounts")
+}
