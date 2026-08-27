@@ -387,6 +387,17 @@ let ShopController = class ShopController {
             throw new common_1.NotFoundException('دسته‌بندی یافت نشد');
         return category;
     }
+    // ── Cart configuration ──
+    async cartConfig() {
+        const setting = await this.prisma.siteSetting.findUnique({ where: { settingKey: 'shop_checkout' } });
+        const value = setting?.settingValue;
+        const config = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+        return {
+            taxRate: typeof config.taxRate === 'number' ? config.taxRate : 0,
+            shippingCost: typeof config.shippingCost === 'number' ? config.shippingCost : 0,
+            freeShippingThreshold: typeof config.freeShippingThreshold === 'number' ? config.freeShippingThreshold : 0,
+        };
+    }
     // ── Products ──
     async products(categorySlug, search, featured, sort, page, pageSize, includeInactive, minPrice, maxPrice, inStock, brand, brands, hasDiscount, outOfStock) {
         const where = {};
@@ -476,7 +487,28 @@ let ShopController = class ShopController {
         });
         if (!product)
             throw new common_1.NotFoundException('محصول یافت نشد');
-        return product;
+        let related = [];
+        if (product.categoryId) {
+            related = await this.prisma.shopProduct.findMany({
+                where: {
+                    categoryId: product.categoryId,
+                    isActive: true,
+                    id: { not: product.id },
+                },
+                orderBy: { salesCount: 'desc' },
+                take: 5,
+                include: { category: true },
+            });
+        }
+        if (related.length === 0) {
+            related = await this.prisma.shopProduct.findMany({
+                where: { isActive: true, id: { not: product.id } },
+                orderBy: { salesCount: 'desc' },
+                take: 5,
+                include: { category: true },
+            });
+        }
+        return { ...product, related };
     }
     async createProduct(dto) {
         return this.prisma.shopProduct.create({
@@ -655,6 +687,12 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], ShopController.prototype, "categoryBySlug", null);
+__decorate([
+    (0, common_1.Get)('cart/config'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ShopController.prototype, "cartConfig", null);
 __decorate([
     (0, common_1.Get)('products'),
     __param(0, (0, common_1.Query)('categorySlug')),

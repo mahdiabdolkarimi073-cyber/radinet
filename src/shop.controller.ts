@@ -153,6 +153,19 @@ export class ShopController {
     return category;
   }
 
+  // ── Cart configuration ──
+  @Get('cart/config')
+  async cartConfig() {
+    const setting = await this.prisma.siteSetting.findUnique({ where: { settingKey: 'shop_checkout' } });
+    const value = setting?.settingValue;
+    const config = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+    return {
+      taxRate: typeof config.taxRate === 'number' ? config.taxRate : 0,
+      shippingCost: typeof config.shippingCost === 'number' ? config.shippingCost : 0,
+      freeShippingThreshold: typeof config.freeShippingThreshold === 'number' ? config.freeShippingThreshold : 0,
+    };
+  }
+
   // ── Products ──
   @Get('products')
   async products(
@@ -248,7 +261,30 @@ export class ShopController {
       include: { category: true },
     });
     if (!product) throw new NotFoundException('محصول یافت نشد');
-    return product;
+
+    let related: any[] = [];
+    if (product.categoryId) {
+      related = await this.prisma.shopProduct.findMany({
+        where: {
+          categoryId: product.categoryId,
+          isActive: true,
+          id: { not: product.id },
+        },
+        orderBy: { salesCount: 'desc' },
+        take: 5,
+        include: { category: true },
+      });
+    }
+    if (related.length === 0) {
+      related = await this.prisma.shopProduct.findMany({
+        where: { isActive: true, id: { not: product.id } },
+        orderBy: { salesCount: 'desc' },
+        take: 5,
+        include: { category: true },
+      });
+    }
+
+    return { ...product, related };
   }
 
   @Post('products')
