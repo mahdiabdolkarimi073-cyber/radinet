@@ -17,6 +17,45 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("./prisma.service");
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
+class CreateShippingMethodDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateShippingMethodDto.prototype, "code", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateShippingMethodDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateShippingMethodDto.prototype, "description", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateShippingMethodDto.prototype, "price", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateShippingMethodDto.prototype, "estimatedDays", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateShippingMethodDto.prototype, "iconKey", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateShippingMethodDto.prototype, "isActive", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateShippingMethodDto.prototype, "displayOrder", void 0);
 class CreateCategoryDto {
 }
 __decorate([
@@ -337,6 +376,66 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateOrderDto.prototype, "discountCode", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderDto.prototype, "firstName", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderDto.prototype, "lastName", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderDto.prototype, "province", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderDto.prototype, "city", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderDto.prototype, "postalCode", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderDto.prototype, "shippingMethod", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateOrderDto.prototype, "needInvoice", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderDto.prototype, "companyNationalId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderDto.prototype, "companyEconomicCode", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderDto.prototype, "companyRegistrationNumber", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderDto.prototype, "companyName", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateOrderDto.prototype, "paymentMethod", void 0);
 let ShopController = class ShopController {
     constructor(prisma) {
         this.prisma = prisma;
@@ -542,6 +641,27 @@ let ShopController = class ShopController {
             include: { category: true },
         });
     }
+    // ── Shipping methods ──
+    async shippingMethods() {
+        return this.prisma.shopShippingMethod.findMany({
+            where: { isActive: true },
+            orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
+        });
+    }
+    async createShippingMethod(dto) {
+        return this.prisma.shopShippingMethod.create({
+            data: {
+                code: dto.code,
+                name: dto.name,
+                description: dto.description ?? '',
+                price: dto.price,
+                estimatedDays: dto.estimatedDays,
+                iconKey: dto.iconKey ?? 'truck',
+                isActive: dto.isActive ?? true,
+                displayOrder: dto.displayOrder ?? 0,
+            },
+        });
+    }
     // ── Orders ──
     async createOrder(dto) {
         if (!dto.items || dto.items.length === 0) {
@@ -593,7 +713,15 @@ let ShopController = class ShopController {
             };
         });
         const subtotal = items.reduce((s, i) => s + Number(i.lineTotal), 0);
-        const shippingCost = 0;
+        let shippingCost = 0;
+        let shippingMethodName = null;
+        if (dto.shippingMethod) {
+            const sm = await this.prisma.shopShippingMethod.findUnique({ where: { code: dto.shippingMethod } });
+            if (sm && sm.isActive) {
+                shippingCost = Number(sm.price);
+                shippingMethodName = sm.name;
+            }
+        }
         const total = subtotal - discountTotal + shippingCost;
         const orderNumber = `RAD-${Date.now().toString(36).toUpperCase()}`;
         const order = await this.prisma.shopOrder.create({
@@ -610,6 +738,19 @@ let ShopController = class ShopController {
                 total,
                 status: 'pending',
                 paymentStatus: 'unpaid',
+                firstName: dto.firstName,
+                lastName: dto.lastName,
+                province: dto.province,
+                city: dto.city,
+                postalCode: dto.postalCode,
+                shippingMethod: dto.shippingMethod,
+                shippingMethodName,
+                needInvoice: dto.needInvoice ?? false,
+                companyNationalId: dto.companyNationalId,
+                companyEconomicCode: dto.companyEconomicCode,
+                companyRegistrationNumber: dto.companyRegistrationNumber,
+                companyName: dto.companyName,
+                paymentMethod: dto.paymentMethod,
                 items: { create: items.map((i) => ({ productId: i.productId, productName: i.productName, unitPrice: i.unitPrice, quantity: i.quantity, lineTotal: i.lineTotal })) },
             },
             include: { items: true },
@@ -629,7 +770,7 @@ let ShopController = class ShopController {
     async trackOrder(orderNumber) {
         const order = await this.prisma.shopOrder.findUnique({
             where: { orderNumber },
-            include: { items: true },
+            include: { items: { include: { product: { select: { imageUrl: true, slug: true } } } } },
         });
         if (!order)
             throw new common_1.NotFoundException('سفارش یافت نشد');
@@ -639,7 +780,7 @@ let ShopController = class ShopController {
         return this.prisma.shopOrder.findMany({
             where: { customerPhone: phone },
             orderBy: { createdAt: 'desc' },
-            include: { items: true },
+            include: { items: { include: { product: { select: { imageUrl: true, slug: true } } } } },
         });
     }
     // ── Discounts ──
@@ -655,6 +796,28 @@ let ShopController = class ShopController {
         if (discount.usageLimit && discount.usedCount >= discount.usageLimit)
             throw new common_1.BadRequestException('سقف استفاده پر شده');
         return discount;
+    }
+    // ── Order status (admin) ──
+    async updateOrderStatus(orderNumber, body) {
+        const order = await this.prisma.shopOrder.findUnique({ where: { orderNumber } });
+        if (!order)
+            throw new common_1.NotFoundException('سفارش یافت نشد');
+        return this.prisma.shopOrder.update({
+            where: { orderNumber },
+            data: {
+                status: body.status,
+                trackingCode: body.trackingCode,
+                paymentStatus: body.paymentStatus,
+            },
+            include: { items: true },
+        });
+    }
+    async allOrders() {
+        return this.prisma.shopOrder.findMany({
+            orderBy: { createdAt: 'desc' },
+            include: { items: true },
+            take: 100,
+        });
     }
 };
 exports.ShopController = ShopController;
@@ -748,6 +911,19 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ShopController.prototype, "updateProduct", null);
 __decorate([
+    (0, common_1.Get)('shipping-methods'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ShopController.prototype, "shippingMethods", null);
+__decorate([
+    (0, common_1.Post)('shipping-methods'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [CreateShippingMethodDto]),
+    __metadata("design:returntype", Promise)
+], ShopController.prototype, "createShippingMethod", null);
+__decorate([
     (0, common_1.Post)('orders'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -775,6 +951,20 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], ShopController.prototype, "validateDiscount", null);
+__decorate([
+    (0, common_1.Patch)('orders/:orderNumber/status'),
+    __param(0, (0, common_1.Param)('orderNumber')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], ShopController.prototype, "updateOrderStatus", null);
+__decorate([
+    (0, common_1.Get)('orders'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ShopController.prototype, "allOrders", null);
 exports.ShopController = ShopController = __decorate([
     (0, common_1.Controller)('shop'),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService])

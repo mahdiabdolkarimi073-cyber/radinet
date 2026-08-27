@@ -15,6 +15,17 @@ import { PrismaService } from './prisma.service';
 import { IsArray, IsBoolean, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
+class CreateShippingMethodDto {
+  @IsString() code!: string;
+  @IsString() name!: string;
+  @IsOptional() @IsString() description?: string;
+  @IsNumber() price!: number;
+  @IsOptional() @IsString() estimatedDays?: string;
+  @IsOptional() @IsString() iconKey?: string;
+  @IsOptional() @IsBoolean() isActive?: boolean;
+  @IsOptional() @IsNumber() displayOrder?: number;
+}
+
 class CreateCategoryDto {
   @IsString() name!: string;
   @IsString() slug!: string;
@@ -95,6 +106,19 @@ class CreateOrderDto {
   @IsArray() @ValidateNested({ each: true }) @Type(() => CreateOrderItemDto)
   items!: CreateOrderItemDto[];
   @IsOptional() @IsString() discountCode?: string;
+  // Checkout fields
+  @IsOptional() @IsString() firstName?: string;
+  @IsOptional() @IsString() lastName?: string;
+  @IsOptional() @IsString() province?: string;
+  @IsOptional() @IsString() city?: string;
+  @IsOptional() @IsString() postalCode?: string;
+  @IsOptional() @IsString() shippingMethod?: string;
+  @IsOptional() @IsBoolean() needInvoice?: boolean;
+  @IsOptional() @IsString() companyNationalId?: string;
+  @IsOptional() @IsString() companyEconomicCode?: string;
+  @IsOptional() @IsString() companyRegistrationNumber?: string;
+  @IsOptional() @IsString() companyName?: string;
+  @IsOptional() @IsString() paymentMethod?: string;
 }
 
 @Controller('shop')
@@ -322,6 +346,31 @@ export class ShopController {
     });
   }
 
+  // ── Shipping methods ──
+  @Get('shipping-methods')
+  async shippingMethods() {
+    return this.prisma.shopShippingMethod.findMany({
+      where: { isActive: true },
+      orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  @Post('shipping-methods')
+  async createShippingMethod(@Body() dto: CreateShippingMethodDto) {
+    return this.prisma.shopShippingMethod.create({
+      data: {
+        code: dto.code,
+        name: dto.name,
+        description: dto.description ?? '',
+        price: dto.price,
+        estimatedDays: dto.estimatedDays,
+        iconKey: dto.iconKey ?? 'truck',
+        isActive: dto.isActive ?? true,
+        displayOrder: dto.displayOrder ?? 0,
+      },
+    });
+  }
+
   // ── Orders ──
   @Post('orders')
   async createOrder(@Body() dto: CreateOrderDto) {
@@ -369,7 +418,15 @@ export class ShopController {
       };
     });
     const subtotal = items.reduce((s, i) => s + Number(i.lineTotal), 0);
-    const shippingCost = 0;
+    let shippingCost = 0;
+    let shippingMethodName: string | null = null;
+    if (dto.shippingMethod) {
+      const sm = await this.prisma.shopShippingMethod.findUnique({ where: { code: dto.shippingMethod } });
+      if (sm && sm.isActive) {
+        shippingCost = Number(sm.price);
+        shippingMethodName = sm.name;
+      }
+    }
     const total = subtotal - discountTotal + shippingCost;
     const orderNumber = `RAD-${Date.now().toString(36).toUpperCase()}`;
     const order = await this.prisma.shopOrder.create({
@@ -386,6 +443,19 @@ export class ShopController {
         total,
         status: 'pending',
         paymentStatus: 'unpaid',
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        province: dto.province,
+        city: dto.city,
+        postalCode: dto.postalCode,
+        shippingMethod: dto.shippingMethod,
+        shippingMethodName,
+        needInvoice: dto.needInvoice ?? false,
+        companyNationalId: dto.companyNationalId,
+        companyEconomicCode: dto.companyEconomicCode,
+        companyRegistrationNumber: dto.companyRegistrationNumber,
+        companyName: dto.companyName,
+        paymentMethod: dto.paymentMethod,
         items: { create: items.map((i) => ({ productId: i.productId, productName: i.productName, unitPrice: i.unitPrice, quantity: i.quantity, lineTotal: i.lineTotal })) },
       },
       include: { items: true },
@@ -411,7 +481,7 @@ export class ShopController {
   async trackOrder(@Param('orderNumber') orderNumber: string) {
     const order = await this.prisma.shopOrder.findUnique({
       where: { orderNumber },
-      include: { items: true },
+      include: { items: { include: { product: { select: { imageUrl: true, slug: true } } } } },
     });
     if (!order) throw new NotFoundException('سفارش یافت نشد');
     return order;
@@ -422,7 +492,7 @@ export class ShopController {
     return this.prisma.shopOrder.findMany({
       where: { customerPhone: phone },
       orderBy: { createdAt: 'desc' },
-      include: { items: true },
+      include: { items: { include: { product: { select: { imageUrl: true, slug: true } } } } },
     });
   }
 
@@ -436,5 +506,33 @@ export class ShopController {
     if (discount.endsAt && now > discount.endsAt) throw new BadRequestException('کد تخفیف منقضی شده');
     if (discount.usageLimit && discount.usedCount >= discount.usageLimit) throw new BadRequestException('سقف استفاده پر شده');
     return discount;
+  }
+
+  // ── Order status (admin) ──
+  @Patch('orders/:orderNumber/status')
+  async updateOrderStatus(
+    @Param('orderNumber') orderNumber: string,
+    @Body() body: { status?: string; trackingCode?: string; paymentStatus?: string },
+  ) {
+    const order = await this.prisma.shopOrder.findUnique({ where: { orderNumber } });
+    if (!order) throw new NotFoundException('سفارش یافت نشد');
+    return this.prisma.shopOrder.update({
+      where: { orderNumber },
+      data: {
+        status: body.status,
+        trackingCode: body.trackingCode,
+        paymentStatus: body.paymentStatus,
+      },
+      include: { items: true },
+    });
+  }
+
+  @Get('orders')
+  async allOrders() {
+    return this.prisma.shopOrder.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { items: true },
+      take: 100,
+    });
   }
 }

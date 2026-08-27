@@ -133,6 +133,21 @@ async function main() {
     },
   });
 
+  // Shipping methods
+  const shippingMethods = [
+    { code: 'post', name: 'پست پیشتاز', price: 80000, estimatedDays: '۳ تا ۵ روز', iconKey: 'post', displayOrder: 0 },
+    { code: 'tipax', name: 'تیپاکس', price: 300000, estimatedDays: '۲ تا ۳ روز', iconKey: 'tipax', displayOrder: 1 },
+    { code: 'bar', name: 'باربری', price: 250000, estimatedDays: '۳ تا ۷ روز', iconKey: 'bar', displayOrder: 2 },
+    { code: 'express', name: 'ارسال اکسپرس', price: 0, estimatedDays: '۲۴ ساعت', iconKey: 'express', displayOrder: 3 },
+  ];
+  for (const sm of shippingMethods) {
+    await prisma.shopShippingMethod.upsert({
+      where: { code: sm.code },
+      update: {},
+      create: sm as any,
+    });
+  }
+
   console.log('Shop seed completed');
 }
 

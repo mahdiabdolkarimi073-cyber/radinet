@@ -315,12 +315,44 @@ model ShopOrder {
   paymentStatus String @default("unpaid") @map("payment_status")
   paymentReference String? @map("payment_reference")
   trackingCode String? @map("tracking_code")
+  // Checkout — shipping info
+  firstName String? @map("first_name")
+  lastName String? @map("last_name")
+  province String?
+  city String?
+  postalCode String? @map("postal_code")
+  // Checkout — shipping method
+  shippingMethod String? @map("shipping_method")
+  shippingMethodName String? @map("shipping_method_name")
+  // Checkout — invoice
+  needInvoice Boolean @default(false) @map("need_invoice")
+  companyNationalId String? @map("company_national_id")
+  companyEconomicCode String? @map("company_economic_code")
+  companyRegistrationNumber String? @map("company_registration_number")
+  companyName String? @map("company_name")
+  // Checkout — payment
+  paymentMethod String? @map("payment_method")
   items ShopOrderItem[]
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   @@index([status, createdAt])
   @@index([customerPhone])
   @@map("shop_orders")
+}
+
+model ShopShippingMethod {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code String @unique
+  name String
+  description String @default("") @db.Text
+  price Decimal @db.Decimal(14, 0)
+  estimatedDays String? @map("estimated_days")
+  iconKey String @default("truck") @map("icon_key")
+  isActive Boolean @default(true) @map("is_active")
+  displayOrder Int @default(0) @map("display_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("shop_shipping_methods")
 }
 
 model ShopOrderItem {
