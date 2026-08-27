@@ -247,6 +247,11 @@ model ShopCategory {
   name String
   slug String @unique
   description String @default("")
+  imageUrl String @default("") @map("image_url")
+  heroImageUrl String @default("") @map("hero_image_url")
+  aboutTitle String @default("درباره این دسته‌بندی") @map("about_title")
+  aboutDescription String @default("") @db.Text @map("about_description")
+  aboutImageUrl String @default("") @map("about_image_url")
   iconKey String @default("imaging-equipment") @map("icon_key")
   colorTheme String @default("blue") @map("color_theme")
   parentId String? @map("parent_id") @db.Uuid
@@ -254,11 +259,9 @@ model ShopCategory {
   displayOrder Int @default(0) @map("display_order")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   parent ShopCategory? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children ShopCategory[] @relation("CategoryHierarchy")
   products ShopProduct[]
-
   @@index([parentId, displayOrder])
   @@map("shop_categories")
 }
@@ -269,7 +272,8 @@ model ShopProduct {
   slug String @unique
   description String @default("") @db.Text
   shortDescription String @default("") @map("short_description")
-  categoryId String? @map("category_id")
+  technicalSpecifications String @default("") @db.Text @map("technical_specifications")
+  categoryId String? @map("category_id") @db.Uuid
   brand String @default("")
   sku String @default("") @unique
   price Decimal @db.Decimal(14, 0)
@@ -321,8 +325,8 @@ model ShopOrder {
 
 model ShopOrderItem {
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderId String @map("order_id")
-  productId String @map("product_id")
+  orderId String @map("order_id") @db.Uuid
+  productId String @map("product_id") @db.Uuid
   productName String @map("product_name")
   unitPrice Decimal @db.Decimal(14, 0) @map("unit_price")
   quantity Int

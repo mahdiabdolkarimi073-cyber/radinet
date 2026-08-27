@@ -6,26 +6,94 @@ import {
   NotFoundException,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
-import { IsArray, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
+class CreateCategoryDto {
+  @IsString() name!: string;
+  @IsString() slug!: string;
+  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsString() imageUrl?: string;
+  @IsOptional() @IsString() heroImageUrl?: string;
+  @IsOptional() @IsString() aboutTitle?: string;
+  @IsOptional() @IsString() aboutDescription?: string;
+  @IsOptional() @IsString() aboutImageUrl?: string;
+  @IsOptional() @IsString() iconKey?: string;
+  @IsOptional() @IsString() colorTheme?: string;
+  @IsOptional() @IsString() parentId?: string;
+  @IsOptional() @IsNumber() displayOrder?: number;
+}
+
+class UpdateCategoryDto {
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() slug?: string;
+  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsString() imageUrl?: string;
+  @IsOptional() @IsString() heroImageUrl?: string;
+  @IsOptional() @IsString() aboutTitle?: string;
+  @IsOptional() @IsString() aboutDescription?: string;
+  @IsOptional() @IsString() aboutImageUrl?: string;
+  @IsOptional() @IsString() iconKey?: string;
+  @IsOptional() @IsString() colorTheme?: string;
+  @IsOptional() @IsString() parentId?: string;
+  @IsOptional() @IsNumber() displayOrder?: number;
+}
+
+class CreateProductDto {
+  @IsString() name!: string;
+  @IsString() slug!: string;
+  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsString() shortDescription?: string;
+  @IsOptional() @IsString() technicalSpecifications?: string;
+  @IsOptional() @IsString() categoryId?: string;
+  @IsOptional() @IsString() brand?: string;
+  @IsOptional() @IsString() sku?: string;
+  @IsNumber() price!: number;
+  @IsOptional() @IsNumber() oldPrice?: number;
+  @IsOptional() @IsNumber() discountPercent?: number;
+  @IsOptional() @IsNumber() stock?: number;
+  @IsOptional() @IsString() imageUrl?: string;
+  @IsOptional() @IsBoolean() isActive?: boolean;
+  @IsOptional() @IsBoolean() isFeatured?: boolean;
+}
+
+class UpdateProductDto {
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() slug?: string;
+  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsString() shortDescription?: string;
+  @IsOptional() @IsString() technicalSpecifications?: string;
+  @IsOptional() @IsString() categoryId?: string;
+  @IsOptional() @IsString() brand?: string;
+  @IsOptional() @IsString() sku?: string;
+  @IsOptional() @IsNumber() price?: number;
+  @IsOptional() @IsNumber() oldPrice?: number;
+  @IsOptional() @IsNumber() discountPercent?: number;
+  @IsOptional() @IsNumber() stock?: number;
+  @IsOptional() @IsString() imageUrl?: string;
+  @IsOptional() @IsBoolean() isActive?: boolean;
+  @IsOptional() @IsBoolean() isFeatured?: boolean;
+}
+
 class CreateOrderItemDto {
-  @IsString() productId: string;
-  @IsNumber() @Min(1) quantity: number;
+  @IsString() productId!: string;
+  @IsNumber() @Min(1) quantity!: number;
 }
 
 class CreateOrderDto {
-  @IsString() customerName: string;
-  @IsString() customerPhone: string;
+  @IsString() customerName!: string;
+  @IsString() customerPhone!: string;
   @IsOptional() @IsString() customerEmail?: string;
   @IsOptional() @IsString() shippingAddress?: string;
   @IsOptional() @IsString() notes?: string;
   @IsArray() @ValidateNested({ each: true }) @Type(() => CreateOrderItemDto)
-  items: CreateOrderItemDto[];
+  items!: CreateOrderItemDto[];
   @IsOptional() @IsString() discountCode?: string;
 }
 
@@ -40,6 +108,38 @@ export class ShopController {
       where: includeInactive === 'true' ? undefined : { isActive: true },
       orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
       include: { _count: { select: { products: true } } },
+    });
+  }
+
+  @Post('categories')
+  async createCategory(@Body() dto: CreateCategoryDto) {
+    return this.prisma.shopCategory.create({
+      data: {
+        name: dto.name,
+        slug: dto.slug,
+        description: dto.description ?? '',
+        imageUrl: dto.imageUrl ?? '',
+        heroImageUrl: dto.heroImageUrl ?? '',
+        aboutTitle: dto.aboutTitle ?? 'درباره این دسته‌بندی',
+        aboutDescription: dto.aboutDescription ?? '',
+        aboutImageUrl: dto.aboutImageUrl ?? '',
+        iconKey: dto.iconKey ?? 'imaging-equipment',
+        colorTheme: dto.colorTheme ?? 'blue',
+        parentId: dto.parentId,
+        displayOrder: dto.displayOrder ?? 0,
+      },
+      include: { children: true, parent: true },
+    });
+  }
+
+  @Patch('categories/:slug')
+  async updateCategory(@Param('slug') slug: string, @Body() dto: UpdateCategoryDto) {
+    const category = await this.prisma.shopCategory.findUnique({ where: { slug } });
+    if (!category) throw new NotFoundException('دسته‌بندی یافت نشد');
+    return this.prisma.shopCategory.update({
+      where: { id: category.id },
+      data: dto,
+      include: { children: true, parent: true },
     });
   }
 
@@ -67,14 +167,22 @@ export class ShopController {
     @Query('maxPrice', new ParseIntPipe({ optional: true })) maxPrice?: number,
     @Query('inStock') inStock?: string,
     @Query('brand') brand?: string,
+    @Query('brands') brands?: string,
     @Query('hasDiscount') hasDiscount?: string,
+    @Query('outOfStock') outOfStock?: string,
   ) {
     const where: any = {};
     if (includeInactive !== 'true') where.isActive = true;
     if (featured === 'true') where.isFeatured = true;
     if (inStock === 'true') where.stock = { gt: 0 };
+    if (outOfStock === 'true') where.stock = { equals: 0 };
     if (hasDiscount === 'true') where.discountPercent = { gt: 0 };
     if (brand) where.brand = brand;
+    if (brands) {
+      const brandList = brands.split(',').map((b) => b.trim()).filter(Boolean);
+      if (brandList.length === 1) where.brand = brandList[0];
+      else if (brandList.length > 1) where.brand = { in: brandList };
+    }
     if (minPrice || maxPrice) {
       where.price = {};
       if (minPrice) where.price.gte = minPrice;
@@ -89,7 +197,9 @@ export class ShopController {
         { name: { contains: search, mode: 'insensitive' } },
         { shortDescription: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
+        { technicalSpecifications: { contains: search, mode: 'insensitive' } },
         { brand: { contains: search, mode: 'insensitive' } },
+        { sku: { contains: search, mode: 'insensitive' } },
       ];
     }
     const order: any = {};
@@ -97,6 +207,7 @@ export class ShopController {
     else if (sort === 'price-desc') order.price = 'desc';
     else if (sort === 'sales') order.salesCount = 'desc';
     else if (sort === 'rating') order.rating = 'desc';
+    else if (sort === 'newest') order.createdAt = 'desc';
     else order.createdAt = 'desc';
 
     const take = Math.min(pageSize ?? 20, 100);
@@ -107,6 +218,17 @@ export class ShopController {
       this.prisma.shopProduct.count({ where }),
     ]);
     return { items, total, page: page ?? 1, pageSize: take };
+  }
+
+  @Get('products/brands')
+  async productBrands() {
+    const rows = await this.prisma.shopProduct.findMany({
+      where: { isActive: true, brand: { not: '' } },
+      select: { brand: true },
+      distinct: ['brand'],
+      orderBy: { brand: 'asc' },
+    });
+    return rows.map((r) => r.brand);
   }
 
   @Get('products/featured')
@@ -127,6 +249,41 @@ export class ShopController {
     });
     if (!product) throw new NotFoundException('محصول یافت نشد');
     return product;
+  }
+
+  @Post('products')
+  async createProduct(@Body() dto: CreateProductDto) {
+    return this.prisma.shopProduct.create({
+      data: {
+        name: dto.name,
+        slug: dto.slug,
+        description: dto.description ?? '',
+        shortDescription: dto.shortDescription ?? '',
+        technicalSpecifications: dto.technicalSpecifications ?? '',
+        categoryId: dto.categoryId,
+        brand: dto.brand ?? '',
+        sku: dto.sku ?? '',
+        price: dto.price,
+        oldPrice: dto.oldPrice,
+        discountPercent: dto.discountPercent ?? 0,
+        stock: dto.stock ?? 0,
+        imageUrl: dto.imageUrl ?? '',
+        isActive: dto.isActive ?? true,
+        isFeatured: dto.isFeatured ?? false,
+      },
+      include: { category: true },
+    });
+  }
+
+  @Put('products/:id')
+  async updateProduct(@Param('id') id: string, @Body() dto: UpdateProductDto) {
+    const product = await this.prisma.shopProduct.findUnique({ where: { id } });
+    if (!product) throw new NotFoundException('محصول یافت نشد');
+    return this.prisma.shopProduct.update({
+      where: { id },
+      data: dto,
+      include: { category: true },
+    });
   }
 
   // ── Orders ──
@@ -160,7 +317,7 @@ export class ShopController {
       if (discount.usageLimit && discount.usedCount >= discount.usageLimit) throw new BadRequestException('سقف استفاده از کد تخفیف پر شده');
       appliedDiscount = discount;
     }
-    const items = dto.items.map((item) => {
+    const items: any[] = dto.items.map((item) => {
       const p = products.find((x) => x.id === item.productId)!;
       const unit = Number(p.price);
       const line = unit * item.quantity;
@@ -193,7 +350,7 @@ export class ShopController {
         total,
         status: 'pending',
         paymentStatus: 'unpaid',
-        items: { create: items.map((i) => ({ ...i, lineTotal: i.lineTotal })) },
+        items: { create: items.map((i) => ({ productId: i.productId, productName: i.productName, unitPrice: i.unitPrice, quantity: i.quantity, lineTotal: i.lineTotal })) },
       },
       include: { items: true },
     });

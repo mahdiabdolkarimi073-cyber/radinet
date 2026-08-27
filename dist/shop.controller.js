@@ -17,6 +17,279 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("./prisma.service");
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
+class CreateCategoryDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "slug", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "description", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "imageUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "heroImageUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "aboutTitle", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "aboutDescription", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "aboutImageUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "iconKey", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "colorTheme", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "parentId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateCategoryDto.prototype, "displayOrder", void 0);
+class UpdateCategoryDto {
+}
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "slug", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "description", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "imageUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "heroImageUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "aboutTitle", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "aboutDescription", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "aboutImageUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "iconKey", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "colorTheme", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "parentId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], UpdateCategoryDto.prototype, "displayOrder", void 0);
+class CreateProductDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "slug", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "description", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "shortDescription", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "technicalSpecifications", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "categoryId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "brand", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "sku", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateProductDto.prototype, "price", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateProductDto.prototype, "oldPrice", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateProductDto.prototype, "discountPercent", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateProductDto.prototype, "stock", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "imageUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateProductDto.prototype, "isActive", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateProductDto.prototype, "isFeatured", void 0);
+class UpdateProductDto {
+}
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "slug", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "description", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "shortDescription", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "technicalSpecifications", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "categoryId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "brand", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "sku", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], UpdateProductDto.prototype, "price", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], UpdateProductDto.prototype, "oldPrice", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], UpdateProductDto.prototype, "discountPercent", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], UpdateProductDto.prototype, "stock", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "imageUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateProductDto.prototype, "isActive", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateProductDto.prototype, "isFeatured", void 0);
 class CreateOrderItemDto {
 }
 __decorate([
@@ -76,6 +349,35 @@ let ShopController = class ShopController {
             include: { _count: { select: { products: true } } },
         });
     }
+    async createCategory(dto) {
+        return this.prisma.shopCategory.create({
+            data: {
+                name: dto.name,
+                slug: dto.slug,
+                description: dto.description ?? '',
+                imageUrl: dto.imageUrl ?? '',
+                heroImageUrl: dto.heroImageUrl ?? '',
+                aboutTitle: dto.aboutTitle ?? 'درباره این دسته‌بندی',
+                aboutDescription: dto.aboutDescription ?? '',
+                aboutImageUrl: dto.aboutImageUrl ?? '',
+                iconKey: dto.iconKey ?? 'imaging-equipment',
+                colorTheme: dto.colorTheme ?? 'blue',
+                parentId: dto.parentId,
+                displayOrder: dto.displayOrder ?? 0,
+            },
+            include: { children: true, parent: true },
+        });
+    }
+    async updateCategory(slug, dto) {
+        const category = await this.prisma.shopCategory.findUnique({ where: { slug } });
+        if (!category)
+            throw new common_1.NotFoundException('دسته‌بندی یافت نشد');
+        return this.prisma.shopCategory.update({
+            where: { id: category.id },
+            data: dto,
+            include: { children: true, parent: true },
+        });
+    }
     async categoryBySlug(slug) {
         const category = await this.prisma.shopCategory.findUnique({
             where: { slug },
@@ -86,7 +388,7 @@ let ShopController = class ShopController {
         return category;
     }
     // ── Products ──
-    async products(categorySlug, search, featured, sort, page, pageSize, includeInactive, minPrice, maxPrice, inStock, brand, hasDiscount) {
+    async products(categorySlug, search, featured, sort, page, pageSize, includeInactive, minPrice, maxPrice, inStock, brand, brands, hasDiscount, outOfStock) {
         const where = {};
         if (includeInactive !== 'true')
             where.isActive = true;
@@ -94,10 +396,19 @@ let ShopController = class ShopController {
             where.isFeatured = true;
         if (inStock === 'true')
             where.stock = { gt: 0 };
+        if (outOfStock === 'true')
+            where.stock = { equals: 0 };
         if (hasDiscount === 'true')
             where.discountPercent = { gt: 0 };
         if (brand)
             where.brand = brand;
+        if (brands) {
+            const brandList = brands.split(',').map((b) => b.trim()).filter(Boolean);
+            if (brandList.length === 1)
+                where.brand = brandList[0];
+            else if (brandList.length > 1)
+                where.brand = { in: brandList };
+        }
         if (minPrice || maxPrice) {
             where.price = {};
             if (minPrice)
@@ -115,7 +426,9 @@ let ShopController = class ShopController {
                 { name: { contains: search, mode: 'insensitive' } },
                 { shortDescription: { contains: search, mode: 'insensitive' } },
                 { description: { contains: search, mode: 'insensitive' } },
+                { technicalSpecifications: { contains: search, mode: 'insensitive' } },
                 { brand: { contains: search, mode: 'insensitive' } },
+                { sku: { contains: search, mode: 'insensitive' } },
             ];
         }
         const order = {};
@@ -127,6 +440,8 @@ let ShopController = class ShopController {
             order.salesCount = 'desc';
         else if (sort === 'rating')
             order.rating = 'desc';
+        else if (sort === 'newest')
+            order.createdAt = 'desc';
         else
             order.createdAt = 'desc';
         const take = Math.min(pageSize ?? 20, 100);
@@ -136,6 +451,15 @@ let ShopController = class ShopController {
             this.prisma.shopProduct.count({ where }),
         ]);
         return { items, total, page: page ?? 1, pageSize: take };
+    }
+    async productBrands() {
+        const rows = await this.prisma.shopProduct.findMany({
+            where: { isActive: true, brand: { not: '' } },
+            select: { brand: true },
+            distinct: ['brand'],
+            orderBy: { brand: 'asc' },
+        });
+        return rows.map((r) => r.brand);
     }
     async featuredProducts() {
         return this.prisma.shopProduct.findMany({
@@ -153,6 +477,38 @@ let ShopController = class ShopController {
         if (!product)
             throw new common_1.NotFoundException('محصول یافت نشد');
         return product;
+    }
+    async createProduct(dto) {
+        return this.prisma.shopProduct.create({
+            data: {
+                name: dto.name,
+                slug: dto.slug,
+                description: dto.description ?? '',
+                shortDescription: dto.shortDescription ?? '',
+                technicalSpecifications: dto.technicalSpecifications ?? '',
+                categoryId: dto.categoryId,
+                brand: dto.brand ?? '',
+                sku: dto.sku ?? '',
+                price: dto.price,
+                oldPrice: dto.oldPrice,
+                discountPercent: dto.discountPercent ?? 0,
+                stock: dto.stock ?? 0,
+                imageUrl: dto.imageUrl ?? '',
+                isActive: dto.isActive ?? true,
+                isFeatured: dto.isFeatured ?? false,
+            },
+            include: { category: true },
+        });
+    }
+    async updateProduct(id, dto) {
+        const product = await this.prisma.shopProduct.findUnique({ where: { id } });
+        if (!product)
+            throw new common_1.NotFoundException('محصول یافت نشد');
+        return this.prisma.shopProduct.update({
+            where: { id },
+            data: dto,
+            include: { category: true },
+        });
     }
     // ── Orders ──
     async createOrder(dto) {
@@ -222,7 +578,7 @@ let ShopController = class ShopController {
                 total,
                 status: 'pending',
                 paymentStatus: 'unpaid',
-                items: { create: items.map((i) => ({ ...i, lineTotal: i.lineTotal })) },
+                items: { create: items.map((i) => ({ productId: i.productId, productName: i.productName, unitPrice: i.unitPrice, quantity: i.quantity, lineTotal: i.lineTotal })) },
             },
             include: { items: true },
         });
@@ -278,6 +634,21 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ShopController.prototype, "categories", null);
 __decorate([
+    (0, common_1.Post)('categories'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [CreateCategoryDto]),
+    __metadata("design:returntype", Promise)
+], ShopController.prototype, "createCategory", null);
+__decorate([
+    (0, common_1.Patch)('categories/:slug'),
+    __param(0, (0, common_1.Param)('slug')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, UpdateCategoryDto]),
+    __metadata("design:returntype", Promise)
+], ShopController.prototype, "updateCategory", null);
+__decorate([
     (0, common_1.Get)('categories/:slug'),
     __param(0, (0, common_1.Param)('slug')),
     __metadata("design:type", Function),
@@ -297,11 +668,19 @@ __decorate([
     __param(8, (0, common_1.Query)('maxPrice', new common_1.ParseIntPipe({ optional: true }))),
     __param(9, (0, common_1.Query)('inStock')),
     __param(10, (0, common_1.Query)('brand')),
-    __param(11, (0, common_1.Query)('hasDiscount')),
+    __param(11, (0, common_1.Query)('brands')),
+    __param(12, (0, common_1.Query)('hasDiscount')),
+    __param(13, (0, common_1.Query)('outOfStock')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String, Number, Number, String, Number, Number, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, Number, Number, String, Number, Number, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], ShopController.prototype, "products", null);
+__decorate([
+    (0, common_1.Get)('products/brands'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ShopController.prototype, "productBrands", null);
 __decorate([
     (0, common_1.Get)('products/featured'),
     __metadata("design:type", Function),
@@ -315,6 +694,21 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], ShopController.prototype, "productBySlug", null);
+__decorate([
+    (0, common_1.Post)('products'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [CreateProductDto]),
+    __metadata("design:returntype", Promise)
+], ShopController.prototype, "createProduct", null);
+__decorate([
+    (0, common_1.Put)('products/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, UpdateProductDto]),
+    __metadata("design:returntype", Promise)
+], ShopController.prototype, "updateProduct", null);
 __decorate([
     (0, common_1.Post)('orders'),
     __param(0, (0, common_1.Body)()),
