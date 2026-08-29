@@ -29,6 +29,10 @@ const allowedExtensions = new Set(['.jpg', '.jpeg', '.png', '.pdf', '.dcm', '.di
 
 mkdirSync(uploadDirectory, { recursive: true });
 
+class CheckPatientDto {
+  @IsString() @Length(10, 10) nationalId!: string;
+}
+
 class CreateTeleReportRequestDto {
   @IsString() @Length(2, 80) country!: string;
   @IsString() @Length(2, 40) language!: string;
@@ -61,6 +65,15 @@ function fileFilter(_request: Express.Request, file: Express.Multer.File, callba
 @Controller('tele-report/requests')
 export class TeleReportRequestController {
   constructor(private readonly prisma: PrismaService) {}
+
+  @Post('check-patient')
+  async checkPatient(@Body() body: CheckPatientDto) {
+    const patient = await this.prisma.teleReportRequest.findFirst({
+      where: { nationalId: body.nationalId.trim() },
+      select: { id: true },
+    });
+    return { hasHistory: Boolean(patient) };
+  }
 
   @Post()
   @UseInterceptors(FilesInterceptor('files', 20, {

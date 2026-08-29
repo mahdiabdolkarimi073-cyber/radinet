@@ -32,6 +32,13 @@ const allowedMimeTypes = new Set([
 ]);
 const allowedExtensions = new Set(['.jpg', '.jpeg', '.png', '.pdf', '.dcm', '.dicom']);
 (0, fs_1.mkdirSync)(uploadDirectory, { recursive: true });
+class CheckPatientDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Length)(10, 10),
+    __metadata("design:type", String)
+], CheckPatientDto.prototype, "nationalId", void 0);
 class CreateTeleReportRequestDto {
 }
 __decorate([
@@ -138,6 +145,13 @@ let TeleReportRequestController = class TeleReportRequestController {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async checkPatient(body) {
+        const patient = await this.prisma.teleReportRequest.findFirst({
+            where: { nationalId: body.nationalId.trim() },
+            select: { id: true },
+        });
+        return { hasHistory: Boolean(patient) };
+    }
     async create(body, files = []) {
         if (!body.nationalId && !body.passportNumber) {
             throw new common_1.BadRequestException('کد ملی یا شماره پاسپورت الزامی است');
@@ -191,6 +205,13 @@ let TeleReportRequestController = class TeleReportRequestController {
     }
 };
 exports.TeleReportRequestController = TeleReportRequestController;
+__decorate([
+    (0, common_1.Post)('check-patient'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [CheckPatientDto]),
+    __metadata("design:returntype", Promise)
+], TeleReportRequestController.prototype, "checkPatient", null);
 __decorate([
     (0, common_1.Post)(),
     (0, common_1.UseInterceptors)((0, platform_express_1.FilesInterceptor)('files', 20, {
