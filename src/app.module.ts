@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common'; import { PrismaService } from './prisma.service'; import { AboutController } from './about.controller'; import { ConsultationController } from './consultation.controller'; import { ContactController } from './contact.controller'; import { LegalController } from './legal.controller'; import { ShopController } from './shop.controller'; import { TeleReportController } from './tele-report.controller';
 import { TeleReportRequestController } from './tele-report-request.controller';
 import { TeleReportPaymentController } from './tele-report-payment.controller';
-@Module({ controllers: [AboutController, ConsultationController, ContactController, LegalController, ShopController, TeleReportController, TeleReportRequestController, TeleReportPaymentController], providers: [PrismaService] }) export class AppModule {}
+import { AuthController } from './auth.controller';
+import { DashboardController } from './dashboard.controller';
+@Module({ controllers: [AboutController, ConsultationController, ContactController, LegalController, ShopController, TeleReportController, TeleReportRequestController, TeleReportPaymentController, AuthController, DashboardController], providers: [PrismaService] }) export class AppModule {}
