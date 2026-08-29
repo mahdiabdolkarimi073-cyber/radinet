@@ -7,6 +7,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   UploadedFiles,
   UseInterceptors,
@@ -51,6 +52,10 @@ class CreateTeleReportRequestDto {
   @IsOptional() @IsDateString() studyDate?: string;
   @IsOptional() @IsString() @Length(0, 2000) pacsUrl?: string;
   @IsOptional() @IsString() @Length(0, 2000) cloudUrl?: string;
+}
+
+class SetReferralPathDto {
+  @IsString() @IsIn(['auto', 'smart', 'manual']) referralPath!: string;
 }
 
 function fileFilter(_request: Express.Request, file: Express.Multer.File, callback: (error: Error | null, acceptFile: boolean) => void) {
@@ -138,9 +143,43 @@ export class TeleReportRequestController {
   async findOne(@Param('requestNumber') requestNumber: string) {
     const request = await this.prisma.teleReportRequest.findUnique({
       where: { requestNumber },
-      select: { requestNumber: true, status: true, createdAt: true, updatedAt: true },
+      select: { requestNumber: true, status: true, referralPath: true, referredAt: true, createdAt: true, updatedAt: true },
     });
     if (!request) throw new BadRequestException('درخواست پیدا نشد');
     return request;
+  }
+
+  @Patch(':requestNumber/referral-path')
+  async setReferralPath(
+    @Param('requestNumber') requestNumber: string,
+    @Body() body: SetReferralPathDto,
+  ) {
+    const request = await this.prisma.teleReportRequest.findUnique({
+      where: { requestNumber },
+      select: { id: true, status: true },
+    });
+    if (!request) throw new BadRequestException('درخواست پیدا نشد');
+
+    if (body.referralPath !== 'auto') {
+      throw new BadRequestException('مسیر انتخاب‌شده در حال حاضر قابل دسترسی نیست. در توسعه آینده امکان‌دسترسی خواهد بود.');
+    }
+
+    const updated = await this.prisma.teleReportRequest.update({
+      where: { requestNumber },
+      data: {
+        referralPath: body.referralPath,
+        referredAt: new Date(),
+        status: 'referred',
+      },
+      select: { requestNumber: true, status: true, referralPath: true, referredAt: true },
+    });
+
+    return {
+      requestNumber: updated.requestNumber,
+      status: updated.status,
+      referralPath: updated.referralPath,
+      referredAt: updated.referredAt,
+      message: 'ارجاع با موفقیت ثبت شد. تیم رادینت درخواست شما را دریافت کرد و به‌زودی گزارش را آماده خواهد کرد.',
+    };
   }
 }

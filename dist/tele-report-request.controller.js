@@ -133,6 +133,13 @@ __decorate([
     (0, class_validator_1.Length)(0, 2000),
     __metadata("design:type", String)
 ], CreateTeleReportRequestDto.prototype, "cloudUrl", void 0);
+class SetReferralPathDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsIn)(['auto', 'smart', 'manual']),
+    __metadata("design:type", String)
+], SetReferralPathDto.prototype, "referralPath", void 0);
 function fileFilter(_request, file, callback) {
     const extension = (0, path_1.extname)(file.originalname).toLowerCase();
     if (!allowedMimeTypes.has(file.mimetype) || !allowedExtensions.has(extension)) {
@@ -197,11 +204,38 @@ let TeleReportRequestController = class TeleReportRequestController {
     async findOne(requestNumber) {
         const request = await this.prisma.teleReportRequest.findUnique({
             where: { requestNumber },
-            select: { requestNumber: true, status: true, createdAt: true, updatedAt: true },
+            select: { requestNumber: true, status: true, referralPath: true, referredAt: true, createdAt: true, updatedAt: true },
         });
         if (!request)
             throw new common_1.BadRequestException('درخواست پیدا نشد');
         return request;
+    }
+    async setReferralPath(requestNumber, body) {
+        const request = await this.prisma.teleReportRequest.findUnique({
+            where: { requestNumber },
+            select: { id: true, status: true },
+        });
+        if (!request)
+            throw new common_1.BadRequestException('درخواست پیدا نشد');
+        if (body.referralPath !== 'auto') {
+            throw new common_1.BadRequestException('مسیر انتخاب‌شده در حال حاضر قابل دسترسی نیست. در توسعه آینده امکان‌دسترسی خواهد بود.');
+        }
+        const updated = await this.prisma.teleReportRequest.update({
+            where: { requestNumber },
+            data: {
+                referralPath: body.referralPath,
+                referredAt: new Date(),
+                status: 'referred',
+            },
+            select: { requestNumber: true, status: true, referralPath: true, referredAt: true },
+        });
+        return {
+            requestNumber: updated.requestNumber,
+            status: updated.status,
+            referralPath: updated.referralPath,
+            referredAt: updated.referredAt,
+            message: 'ارجاع با موفقیت ثبت شد. تیم رادینت درخواست شما را دریافت کرد و به‌زودی گزارش را آماده خواهد کرد.',
+        };
     }
 };
 exports.TeleReportRequestController = TeleReportRequestController;
@@ -237,6 +271,14 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], TeleReportRequestController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':requestNumber/referral-path'),
+    __param(0, (0, common_1.Param)('requestNumber')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, SetReferralPathDto]),
+    __metadata("design:returntype", Promise)
+], TeleReportRequestController.prototype, "setReferralPath", null);
 exports.TeleReportRequestController = TeleReportRequestController = __decorate([
     (0, common_1.Controller)('tele-report/requests'),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService])

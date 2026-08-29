@@ -407,6 +407,8 @@ model TeleReportRequest {
   studyDate DateTime? @map("study_date")
   pacsUrl String? @db.Text @map("pacs_url")
   cloudUrl String? @db.Text @map("cloud_url")
+  referralPath String? @map("referral_path")
+  referredAt DateTime? @map("referred_at")
   status String @default("new")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
