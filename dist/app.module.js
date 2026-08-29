@@ -14,9 +14,11 @@ const consultation_controller_1 = require("./consultation.controller");
 const contact_controller_1 = require("./contact.controller");
 const legal_controller_1 = require("./legal.controller");
 const shop_controller_1 = require("./shop.controller");
+const tele_report_controller_1 = require("./tele-report.controller");
+const tele_report_request_controller_1 = require("./tele-report-request.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
-    (0, common_1.Module)({ controllers: [about_controller_1.AboutController, consultation_controller_1.ConsultationController, contact_controller_1.ContactController, legal_controller_1.LegalController, shop_controller_1.ShopController], providers: [prisma_service_1.PrismaService] })
+    (0, common_1.Module)({ controllers: [about_controller_1.AboutController, consultation_controller_1.ConsultationController, contact_controller_1.ContactController, legal_controller_1.LegalController, shop_controller_1.ShopController, tele_report_controller_1.TeleReportController, tele_report_request_controller_1.TeleReportRequestController], providers: [prisma_service_1.PrismaService] })
 ], AppModule);

@@ -386,3 +386,46 @@ model ShopDiscount {
   createdAt DateTime @default(now()) @map("created_at")
   @@map("shop_discounts")
 }
+
+model TeleReportRequest {
+  id String @id @default(uuid()) @db.Uuid
+  requestNumber String @unique @map("request_number")
+  country String
+  language String
+  patientFirstName String @map("patient_first_name")
+  patientLastName String @map("patient_last_name")
+  nationalId String? @map("national_id")
+  passportNumber String? @map("passport_number")
+  phone String
+  city String
+  age Int?
+  gender String
+  clinicalHistory String @db.Text @map("clinical_history")
+  symptoms String @db.Text
+  imagingType String @map("imaging_type")
+  imagingArea String @map("imaging_area")
+  studyDate DateTime? @map("study_date")
+  pacsUrl String? @db.Text @map("pacs_url")
+  cloudUrl String? @db.Text @map("cloud_url")
+  status String @default("new")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  attachments TeleReportAttachment[]
+  @@index([status, createdAt])
+  @@index([phone])
+  @@map("tele_report_requests")
+}
+
+model TeleReportAttachment {
+  id String @id @default(uuid()) @db.Uuid
+  requestId String @map("request_id") @db.Uuid
+  originalName String @map("original_name")
+  storedName String @map("stored_name")
+  mimeType String @map("mime_type")
+  size Int
+  storagePath String @map("storage_path")
+  createdAt DateTime @default(now()) @map("created_at")
+  request TeleReportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  @@index([requestId])
+  @@map("tele_report_attachments")
+}
