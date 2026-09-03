@@ -19,6 +19,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { IsBoolean, IsOptional, IsString, Length } from 'class-validator';
 import * as jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from './prisma.service';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'radinet-dev-secret-change-me';
@@ -85,10 +86,7 @@ export class ReportController {
   ) {
     const page = Math.max(Number.parseInt(pageParam ?? '1', 10) || 1, 1);
     const limit = Math.min(Math.max(Number.parseInt(limitParam ?? '8', 10) || 8, 1), 50);
-    const where: {
-      status?: string;
-      OR?: Array<Record<string, { contains: string; mode: 'insensitive' }>>;
-    } = {};
+    const where: Prisma.RadiologyReportWhereInput = {};
 
     if (status && status !== 'all') where.status = status;
     if (search?.trim()) {
