@@ -19,9 +19,27 @@ const tele_report_request_controller_1 = require("./tele-report-request.controll
 const tele_report_payment_controller_1 = require("./tele-report-payment.controller");
 const auth_controller_1 = require("./auth.controller");
 const dashboard_controller_1 = require("./dashboard.controller");
+const patient_file_controller_1 = require("./patient-file.controller");
+const report_controller_1 = require("./report.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
-    (0, common_1.Module)({ controllers: [about_controller_1.AboutController, consultation_controller_1.ConsultationController, contact_controller_1.ContactController, legal_controller_1.LegalController, shop_controller_1.ShopController, tele_report_controller_1.TeleReportController, tele_report_request_controller_1.TeleReportRequestController, tele_report_payment_controller_1.TeleReportPaymentController, auth_controller_1.AuthController, dashboard_controller_1.DashboardController], providers: [prisma_service_1.PrismaService] })
+    (0, common_1.Module)({
+        controllers: [
+            about_controller_1.AboutController,
+            consultation_controller_1.ConsultationController,
+            contact_controller_1.ContactController,
+            legal_controller_1.LegalController,
+            shop_controller_1.ShopController,
+            tele_report_controller_1.TeleReportController,
+            tele_report_request_controller_1.TeleReportRequestController,
+            tele_report_payment_controller_1.TeleReportPaymentController,
+            auth_controller_1.AuthController,
+            dashboard_controller_1.DashboardController,
+            patient_file_controller_1.PatientFileController,
+            report_controller_1.ReportController,
+        ],
+        providers: [prisma_service_1.PrismaService],
+    })
 ], AppModule);

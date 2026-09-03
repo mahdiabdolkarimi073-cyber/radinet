@@ -413,6 +413,7 @@ model TeleReportRequest {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   attachments TeleReportAttachment[]
+  reports RadiologyReport[]
   @@index([status, createdAt])
   @@index([phone])
   @@map("tele_report_requests")
@@ -440,5 +441,44 @@ model User {
   role String @default("user") @map("role")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  reports RadiologyReport[]
   @@map("users")
+}
+
+// ── Radiology Reports ──
+
+model RadiologyReport {
+  id String @id @default(uuid()) @db.Uuid
+  requestId String @map("request_id") @db.Uuid
+  authorId String? @map("author_id") @db.Uuid
+  findings String @db.Text @default("")
+  conclusion String @db.Text @default("")
+  status String @default("draft")
+  signed Boolean @default(false)
+  signatureName String? @map("signature_name")
+  signedAt DateTime? @map("signed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  request TeleReportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  images RadiologyReportImage[]
+  @@index([requestId])
+  @@index([authorId])
+  @@index([status])
+  @@map("radiology_reports")
+}
+
+model RadiologyReportImage {
+  id String @id @default(uuid()) @db.Uuid
+  reportId String @map("report_id") @db.Uuid
+  originalName String @map("original_name")
+  storedName String @map("stored_name")
+  mimeType String @map("mime_type")
+  size Int
+  storagePath String @map("storage_path")
+  caption String @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+  report RadiologyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  @@index([reportId])
+  @@map("radiology_report_images")
 }

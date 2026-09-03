@@ -1,0 +1,255 @@
+import { randomUUID } from 'crypto';
+import { mkdirSync } from 'fs';
+import { extname, join } from 'path';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Param,
+  Patch,
+  Post,
+  UnauthorizedException,
+  UploadedFiles,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { IsBoolean, IsOptional, IsString, Length } from 'class-validator';
+import * as jwt from 'jsonwebtoken';
+import { PrismaService } from './prisma.service';
+
+const JWT_SECRET = process.env.JWT_SECRET ?? 'radinet-dev-secret-change-me';
+const reportUploadDir = join(process.cwd(), 'uploads', 'report-images');
+
+mkdirSync(reportUploadDir, { recursive: true });
+
+const allowedImageMime = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const allowedImageExt = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+
+function extractUserId(auth?: string): { id: string; name: string } | null {
+  if (!auth?.startsWith('Bearer ')) return null;
+  try {
+    const payload = jwt.verify(auth.slice('Bearer '.length), JWT_SECRET) as jwt.JwtPayload;
+    if (!payload.sub) return null;
+    return { id: payload.sub, name: payload.name ?? '' };
+  } catch {
+    return null;
+  }
+}
+
+class CreateReportDto {
+  @IsString() @Length(1, 36) requestId!: string;
+  @IsOptional() @IsString() @Length(0, 20000) findings?: string;
+  @IsOptional() @IsString() @Length(0, 10000) conclusion?: string;
+}
+
+class UpdateReportDto {
+  @IsOptional() @IsString() @Length(0, 20000) findings?: string;
+  @IsOptional() @IsString() @Length(0, 10000) conclusion?: string;
+}
+
+class SignReportDto {
+  @IsBoolean() signed!: boolean;
+  @IsOptional() @IsString() @Length(2, 100) signatureName?: string;
+}
+
+class SubmitReportDto {
+  @IsString() @Length(0, 20000) findings!: string;
+  @IsString() @Length(0, 10000) conclusion!: string;
+  @IsBoolean() signed!: boolean;
+  @IsOptional() @IsString() @Length(2, 100) signatureName?: string;
+}
+
+function imageFileFilter(_req: Express.Request, file: Express.Multer.File, cb: (err: Error | null, accept: boolean) => void) {
+  const ext = extname(file.originalname).toLowerCase();
+  if (!allowedImageMime.has(file.mimetype) || !allowedImageExt.has(ext)) {
+    cb(new BadRequestException('فقط فایل‌های تصویری JPEG، PNG و WebP مجاز هستند'), false);
+    return;
+  }
+  cb(null, true);
+}
+
+@Controller('dashboard/reports')
+export class ReportController {
+  constructor(private readonly prisma: PrismaService) {}
+
+  @Get('by-request/:requestId')
+  async getReportsByRequest(@Param('requestId') requestId: string) {
+    const reports = await this.prisma.radiologyReport.findMany({
+      where: { requestId },
+      include: {
+        author: { select: { id: true, fullName: true } },
+        images: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { items: reports };
+  }
+
+  @Get(':id')
+  async getReport(@Param('id') id: string) {
+    const report = await this.prisma.radiologyReport.findUnique({
+      where: { id },
+      include: {
+        author: { select: { id: true, fullName: true } },
+        images: { orderBy: { createdAt: 'asc' } },
+        request: {
+          select: {
+            id: true,
+            requestNumber: true,
+            patientFirstName: true,
+            patientLastName: true,
+            imagingType: true,
+            imagingArea: true,
+          },
+        },
+      },
+    });
+    if (!report) throw new BadRequestException('گزارش پیدا نشد');
+    return report;
+  }
+
+  @Post()
+  async createReport(@Body() body: CreateReportDto, @Headers('authorization') auth?: string) {
+    const user = extractUserId(auth);
+    if (!user) throw new UnauthorizedException('احراز هویت الزامی است');
+
+    const request = await this.prisma.teleReportRequest.findUnique({
+      where: { id: body.requestId },
+      select: { id: true },
+    });
+    if (!request) throw new BadRequestException('درخواست بیمار پیدا نشد');
+
+    return this.prisma.radiologyReport.create({
+      data: {
+        requestId: body.requestId,
+        authorId: user.id,
+        findings: body.findings ?? '',
+        conclusion: body.conclusion ?? '',
+        status: 'draft',
+      },
+      include: { images: true },
+    });
+  }
+
+  @Patch(':id')
+  async updateReport(@Param('id') id: string, @Body() body: UpdateReportDto) {
+    const report = await this.prisma.radiologyReport.findUnique({ where: { id } });
+    if (!report) throw new BadRequestException('گزارش پیدا نشد');
+    if (report.status === 'final') throw new BadRequestException('گزارش نهایی قابل ویرایش نیست');
+
+    return this.prisma.radiologyReport.update({
+      where: { id },
+      data: {
+        ...(body.findings !== undefined ? { findings: body.findings } : {}),
+        ...(body.conclusion !== undefined ? { conclusion: body.conclusion } : {}),
+      },
+      include: { images: true },
+    });
+  }
+
+  @Post(':id/sign')
+  async signReport(@Param('id') id: string, @Body() body: SignReportDto, @Headers('authorization') auth?: string) {
+    const user = extractUserId(auth);
+    if (!user) throw new UnauthorizedException('احراز هویت الزامی است');
+
+    const report = await this.prisma.radiologyReport.findUnique({ where: { id } });
+    if (!report) throw new BadRequestException('گزارش پیدا نشد');
+
+    return this.prisma.radiologyReport.update({
+      where: { id },
+      data: {
+        signed: body.signed,
+        signatureName: body.signed ? (body.signatureName ?? user.name) : null,
+        signedAt: body.signed ? new Date() : null,
+      },
+    });
+  }
+
+  @Post(':id/submit')
+  async submitReport(@Param('id') id: string, @Body() body: SubmitReportDto, @Headers('authorization') auth?: string) {
+    const user = extractUserId(auth);
+    if (!user) throw new UnauthorizedException('احراز هویت الزامی است');
+
+    const report = await this.prisma.radiologyReport.findUnique({ where: { id } });
+    if (!report) throw new BadRequestException('گزارش پیدا نشد');
+    if (report.status === 'final') throw new BadRequestException('گزارش قبلاً نهایی شده است');
+
+    return this.prisma.radiologyReport.update({
+      where: { id },
+      data: {
+        findings: body.findings,
+        conclusion: body.conclusion,
+        status: 'final',
+        signed: body.signed,
+        signatureName: body.signed ? (body.signatureName ?? user.name) : null,
+        signedAt: body.signed ? new Date() : null,
+      },
+      include: {
+        images: true,
+        request: {
+          select: {
+            id: true,
+            requestNumber: true,
+            patientFirstName: true,
+            patientLastName: true,
+          },
+        },
+      },
+    });
+  }
+
+  @Post(':id/images')
+  @UseInterceptors(FilesInterceptor('images', 10, {
+    storage: diskStorage({
+      destination: reportUploadDir,
+      filename: (_req, file, cb) => {
+        cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`);
+      },
+    }),
+    fileFilter: imageFileFilter,
+    limits: { fileSize: 15 * 1024 * 1024, files: 10 },
+  }))
+  async uploadImages(
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[] = [],
+  ) {
+    const report = await this.prisma.radiologyReport.findUnique({ where: { id } });
+    if (!report) throw new BadRequestException('گزارش پیدا نشد');
+    if (report.status === 'final') throw new BadRequestException('گزارش نهایی قابل تغییر نیست');
+
+    if (!files.length) throw new BadRequestException('هیچ فایلی ارسال نشد');
+
+    const images = await Promise.all(
+      files.map((file) =>
+        this.prisma.radiologyReportImage.create({
+          data: {
+            reportId: id,
+            originalName: file.originalname,
+            storedName: file.filename,
+            mimeType: file.mimetype,
+            size: file.size,
+            storagePath: file.path,
+          },
+        }),
+      ),
+    );
+
+    return { images };
+  }
+
+  @Post(':id/images/:imageId/delete')
+  async deleteImage(@Param('id') id: string, @Param('imageId') imageId: string) {
+    const report = await this.prisma.radiologyReport.findUnique({ where: { id } });
+    if (!report) throw new BadRequestException('گزارش پیدا نشد');
+    if (report.status === 'final') throw new BadRequestException('گزارش نهایی قابل تغییر نیست');
+
+    await this.prisma.radiologyReportImage.delete({
+      where: { id: imageId },
+    });
+
+    return { ok: true };
+  }
+}
