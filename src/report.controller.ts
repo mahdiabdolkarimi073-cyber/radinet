@@ -5,6 +5,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
   Param,
@@ -30,12 +31,12 @@ mkdirSync(reportUploadDir, { recursive: true });
 const allowedImageMime = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const allowedImageExt = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
-function extractUserId(auth?: string): { id: string; name: string } | null {
+function extractUserId(auth?: string): { id: string; name: string; role: string } | null {
   if (!auth?.startsWith('Bearer ')) return null;
   try {
     const payload = jwt.verify(auth.slice('Bearer '.length), JWT_SECRET) as jwt.JwtPayload;
     if (!payload.sub) return null;
-    return { id: payload.sub, name: payload.name ?? '' };
+    return { id: payload.sub, name: payload.name ?? '', role: (payload.role as string) ?? 'user' };
   } catch {
     return null;
   }
@@ -172,6 +173,7 @@ export class ReportController {
   async createReport(@Body() body: CreateReportDto, @Headers('authorization') auth?: string) {
     const user = extractUserId(auth);
     if (!user) throw new UnauthorizedException('احراز هویت الزامی است');
+    if (user.role !== 'radiologist') throw new ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
 
     const request = await this.prisma.teleReportRequest.findUnique({
       where: { id: body.requestId },
@@ -211,6 +213,7 @@ export class ReportController {
   async signReport(@Param('id') id: string, @Body() body: SignReportDto, @Headers('authorization') auth?: string) {
     const user = extractUserId(auth);
     if (!user) throw new UnauthorizedException('احراز هویت الزامی است');
+    if (user.role !== 'radiologist') throw new ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
 
     const report = await this.prisma.radiologyReport.findUnique({ where: { id } });
     if (!report) throw new BadRequestException('گزارش پیدا نشد');
@@ -229,6 +232,7 @@ export class ReportController {
   async submitReport(@Param('id') id: string, @Body() body: SubmitReportDto, @Headers('authorization') auth?: string) {
     const user = extractUserId(auth);
     if (!user) throw new UnauthorizedException('احراز هویت الزامی است');
+    if (user.role !== 'radiologist') throw new ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
 
     const report = await this.prisma.radiologyReport.findUnique({ where: { id } });
     if (!report) throw new BadRequestException('گزارش پیدا نشد');

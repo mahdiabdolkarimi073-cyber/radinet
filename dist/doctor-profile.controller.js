@@ -58,7 +58,7 @@ function extractUser(auth) {
         const payload = jwt.verify(auth.slice('Bearer '.length), JWT_SECRET);
         if (!payload.sub)
             return null;
-        return { id: payload.sub, name: payload.name ?? '' };
+        return { id: payload.sub, name: payload.name ?? '', role: payload.role ?? 'user' };
     }
     catch {
         return null;
@@ -152,24 +152,23 @@ let DoctorProfileController = class DoctorProfileController {
         const user = extractUser(auth);
         if (!user)
             throw new common_1.UnauthorizedException('احراز هویت الزامی است');
-        let profile = await this.prisma.doctorProfile.findUnique({
-            where: { userId: user.id },
+        if (user.role !== 'radiologist')
+            throw new common_1.ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
+        const userRow = await this.prisma.user.findUnique({
+            where: { id: user.id },
+            select: { id: true, fullName: true, email: true },
         });
-        if (!profile) {
-            const userRow = await this.prisma.user.findUnique({
-                where: { id: user.id },
-                select: { id: true, fullName: true, email: true },
-            });
-            if (!userRow)
-                throw new common_1.UnauthorizedException('کاربر یافت نشد');
-            profile = await this.prisma.doctorProfile.create({
-                data: {
-                    userId: user.id,
-                    fullName: userRow.fullName,
-                    email: userRow.email,
-                },
-            });
-        }
+        if (!userRow)
+            throw new common_1.UnauthorizedException('کاربر یافت نشد');
+        const profile = await this.prisma.doctorProfile.upsert({
+            where: { userId: user.id },
+            update: {},
+            create: {
+                userId: user.id,
+                fullName: userRow.fullName,
+                email: userRow.email,
+            },
+        });
         const reportCount = await this.prisma.radiologyReport.count({
             where: { authorId: user.id },
         });
@@ -196,24 +195,23 @@ let DoctorProfileController = class DoctorProfileController {
         const user = extractUser(auth);
         if (!user)
             throw new common_1.UnauthorizedException('احراز هویت الزامی است');
-        let profile = await this.prisma.doctorProfile.findUnique({
-            where: { userId: user.id },
+        if (user.role !== 'radiologist')
+            throw new common_1.ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
+        const userRow = await this.prisma.user.findUnique({
+            where: { id: user.id },
+            select: { id: true, fullName: true, email: true },
         });
-        if (!profile) {
-            const userRow = await this.prisma.user.findUnique({
-                where: { id: user.id },
-                select: { id: true, fullName: true, email: true },
-            });
-            if (!userRow)
-                throw new common_1.UnauthorizedException('کاربر یافت نشد');
-            profile = await this.prisma.doctorProfile.create({
-                data: {
-                    userId: user.id,
-                    fullName: userRow.fullName,
-                    email: userRow.email,
-                },
-            });
-        }
+        if (!userRow)
+            throw new common_1.UnauthorizedException('کاربر یافت نشد');
+        const profile = await this.prisma.doctorProfile.upsert({
+            where: { userId: user.id },
+            update: {},
+            create: {
+                userId: user.id,
+                fullName: userRow.fullName,
+                email: userRow.email,
+            },
+        });
         const data = {};
         if (body.fullName !== undefined)
             data.fullName = body.fullName;

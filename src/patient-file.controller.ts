@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
   Param,
@@ -13,11 +14,12 @@ import { PrismaService } from './prisma.service';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'radinet-dev-secret-change-me';
 
-function extractUserId(auth?: string): string | null {
+function extractUserId(auth?: string): { id: string; role: string } | null {
   if (!auth?.startsWith('Bearer ')) return null;
   try {
     const payload = jwt.verify(auth.slice('Bearer '.length), JWT_SECRET) as jwt.JwtPayload;
-    return payload.sub ?? null;
+    if (!payload.sub) return null;
+    return { id: payload.sub, role: (payload.role as string) ?? 'user' };
   } catch {
     return null;
   }
@@ -90,8 +92,10 @@ export class PatientFileController {
 
   @Get(':id')
   async getPatientFile(@Param('id') id: string, @Headers('authorization') auth?: string) {
-    const userId = extractUserId(auth);
-    if (!userId) throw new UnauthorizedException('احراز هویت الزامی است');
+    const authUser = extractUserId(auth);
+    if (!authUser) throw new UnauthorizedException('احراز هویت الزامی است');
+    if (authUser.role !== 'radiologist') throw new ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
+    const userId = authUser.id;
 
     const request = await this.prisma.teleReportRequest.findUnique({
       where: { id },

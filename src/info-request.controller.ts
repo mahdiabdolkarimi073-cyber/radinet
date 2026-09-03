@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
   Param,
@@ -17,12 +18,12 @@ import { PrismaService } from './prisma.service';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'radinet-dev-secret-change-me';
 
-function extractUser(auth?: string): { id: string; name: string } | null {
+function extractUser(auth?: string): { id: string; name: string; role: string } | null {
   if (!auth?.startsWith('Bearer ')) return null;
   try {
     const payload = jwt.verify(auth.slice('Bearer '.length), JWT_SECRET) as jwt.JwtPayload;
     if (!payload.sub) return null;
-    return { id: payload.sub, name: payload.name ?? '' };
+    return { id: payload.sub, name: payload.name ?? '', role: (payload.role as string) ?? 'user' };
   } catch {
     return null;
   }
@@ -59,6 +60,7 @@ export class InfoRequestController {
   ) {
     const user = extractUser(auth);
     if (!user) throw new UnauthorizedException('احراز هویت الزامی است');
+    if (user.role !== 'radiologist') throw new ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
 
     const page = Math.max(Number.parseInt(pageParam ?? '1', 10) || 1, 1);
     const limit = Math.min(Math.max(Number.parseInt(limitParam ?? '8', 10) || 8, 1), 50);
@@ -115,6 +117,7 @@ export class InfoRequestController {
   ) {
     const user = extractUser(auth);
     if (!user) throw new UnauthorizedException('احراز هویت الزامی است');
+    if (user.role !== 'radiologist') throw new ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
 
     const request = await this.prisma.teleReportRequest.findUnique({
       where: { id: body.requestId },
@@ -153,6 +156,7 @@ export class InfoRequestController {
   ) {
     const user = extractUser(auth);
     if (!user) throw new UnauthorizedException('احراز هویت الزامی است');
+    if (user.role !== 'radiologist') throw new ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
 
     const existing = await this.prisma.infoRequest.findUnique({ where: { id } });
     if (!existing) throw new BadRequestException('درخواست اطلاعات پیدا نشد');

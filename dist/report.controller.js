@@ -67,7 +67,7 @@ function extractUserId(auth) {
         const payload = jwt.verify(auth.slice('Bearer '.length), JWT_SECRET);
         if (!payload.sub)
             return null;
-        return { id: payload.sub, name: payload.name ?? '' };
+        return { id: payload.sub, name: payload.name ?? '', role: payload.role ?? 'user' };
     }
     catch {
         return null;
@@ -235,6 +235,8 @@ let ReportController = class ReportController {
         const user = extractUserId(auth);
         if (!user)
             throw new common_1.UnauthorizedException('احراز هویت الزامی است');
+        if (user.role !== 'radiologist')
+            throw new common_1.ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
         const request = await this.prisma.teleReportRequest.findUnique({
             where: { id: body.requestId },
             select: { id: true },
@@ -271,6 +273,8 @@ let ReportController = class ReportController {
         const user = extractUserId(auth);
         if (!user)
             throw new common_1.UnauthorizedException('احراز هویت الزامی است');
+        if (user.role !== 'radiologist')
+            throw new common_1.ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
         const report = await this.prisma.radiologyReport.findUnique({ where: { id } });
         if (!report)
             throw new common_1.BadRequestException('گزارش پیدا نشد');
@@ -287,6 +291,8 @@ let ReportController = class ReportController {
         const user = extractUserId(auth);
         if (!user)
             throw new common_1.UnauthorizedException('احراز هویت الزامی است');
+        if (user.role !== 'radiologist')
+            throw new common_1.ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
         const report = await this.prisma.radiologyReport.findUnique({ where: { id } });
         if (!report)
             throw new common_1.BadRequestException('گزارش پیدا نشد');

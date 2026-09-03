@@ -55,7 +55,9 @@ function extractUserId(auth) {
         return null;
     try {
         const payload = jwt.verify(auth.slice('Bearer '.length), JWT_SECRET);
-        return payload.sub ?? null;
+        if (!payload.sub)
+            return null;
+        return { id: payload.sub, role: payload.role ?? 'user' };
     }
     catch {
         return null;
@@ -118,9 +120,12 @@ let PatientFileController = class PatientFileController {
         };
     }
     async getPatientFile(id, auth) {
-        const userId = extractUserId(auth);
-        if (!userId)
+        const authUser = extractUserId(auth);
+        if (!authUser)
             throw new common_1.UnauthorizedException('احراز هویت الزامی است');
+        if (authUser.role !== 'radiologist')
+            throw new common_1.ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
+        const userId = authUser.id;
         const request = await this.prisma.teleReportRequest.findUnique({
             where: { id },
             include: {

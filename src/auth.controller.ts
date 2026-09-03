@@ -96,6 +96,10 @@ export class AuthController {
       return { ok: false, error: 'ایمیل یا رمز عبور اشتباه است' };
     }
 
+    if (user.role !== 'radiologist' && user.role !== 'admin') {
+      return { ok: false, error: 'دسترسی مجاز نیست' };
+    }
+
     const token = signToken({
       id: user.id,
       fullName: user.fullName,

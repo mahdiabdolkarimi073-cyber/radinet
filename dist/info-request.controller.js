@@ -58,7 +58,7 @@ function extractUser(auth) {
         const payload = jwt.verify(auth.slice('Bearer '.length), JWT_SECRET);
         if (!payload.sub)
             return null;
-        return { id: payload.sub, name: payload.name ?? '' };
+        return { id: payload.sub, name: payload.name ?? '', role: payload.role ?? 'user' };
     }
     catch {
         return null;
@@ -107,6 +107,8 @@ let InfoRequestController = class InfoRequestController {
         const user = extractUser(auth);
         if (!user)
             throw new common_1.UnauthorizedException('احراز هویت الزامی است');
+        if (user.role !== 'radiologist')
+            throw new common_1.ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
         const page = Math.max(Number.parseInt(pageParam ?? '1', 10) || 1, 1);
         const limit = Math.min(Math.max(Number.parseInt(limitParam ?? '8', 10) || 8, 1), 50);
         const where = { authorId: user.id };
@@ -156,6 +158,8 @@ let InfoRequestController = class InfoRequestController {
         const user = extractUser(auth);
         if (!user)
             throw new common_1.UnauthorizedException('احراز هویت الزامی است');
+        if (user.role !== 'radiologist')
+            throw new common_1.ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
         const request = await this.prisma.teleReportRequest.findUnique({
             where: { id: body.requestId },
             select: { id: true },
@@ -188,6 +192,8 @@ let InfoRequestController = class InfoRequestController {
         const user = extractUser(auth);
         if (!user)
             throw new common_1.UnauthorizedException('احراز هویت الزامی است');
+        if (user.role !== 'radiologist')
+            throw new common_1.ForbiddenException('دسترسی به پنل پزشک تنها برای رادیولوژیست‌ها مجاز است');
         const existing = await this.prisma.infoRequest.findUnique({ where: { id } });
         if (!existing)
             throw new common_1.BadRequestException('درخواست اطلاعات پیدا نشد');
