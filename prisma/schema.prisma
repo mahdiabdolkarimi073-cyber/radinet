@@ -414,6 +414,7 @@ model TeleReportRequest {
   updatedAt DateTime @updatedAt @map("updated_at")
   attachments TeleReportAttachment[]
   reports RadiologyReport[]
+  infoRequests InfoRequest[]
   @@index([status, createdAt])
   @@index([phone])
   @@map("tele_report_requests")
@@ -442,6 +443,8 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   reports RadiologyReport[]
+  infoRequests InfoRequest[]
+  doctorProfile DoctorProfile?
   @@map("users")
 }
 
@@ -481,4 +484,51 @@ model RadiologyReportImage {
   report RadiologyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
   @@index([reportId])
   @@map("radiology_report_images")
+}
+
+// ── Info Requests (درخواست اطلاعات تکمیلی) ──
+
+model InfoRequest {
+  id String @id @default(uuid()) @db.Uuid
+  requestId String @map("request_id") @db.Uuid
+  authorId String? @map("author_id") @db.Uuid
+  title String
+  body String @db.Text
+  status String @default("open")
+  response String? @db.Text
+  respondedAt DateTime? @map("responded_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  request TeleReportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  @@index([requestId])
+  @@index([authorId])
+  @@index([status, createdAt])
+  @@map("info_requests")
+}
+
+// ── Doctor Profile (پروفایل تخصصی) ──
+
+model DoctorProfile {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+  fullName String @map("full_name")
+  email String
+  specialty String @default("")
+  subSpecialty String? @map("sub_specialty")
+  licenseNumber String? @map("license_number")
+  biography String @db.Text @default("")
+  education String @db.Text @default("")
+  certifications String @db.Text @default("")
+  experienceYears Int @default(0) @map("experience_years")
+  languages String @default("")
+  workplace String @default("")
+  maxDailyReports Int @default(10) @map("max_daily_reports")
+  notificationEmail Boolean @default(true) @map("notification_email")
+  notificationSms Boolean @default(false) @map("notification_sms")
+  avatarUrl String? @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("doctor_profiles")
 }

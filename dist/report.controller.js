@@ -152,6 +152,52 @@ let ReportController = class ReportController {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async listReports(status, search, pageParam, limitParam) {
+        const page = Math.max(Number.parseInt(pageParam ?? '1', 10) || 1, 1);
+        const limit = Math.min(Math.max(Number.parseInt(limitParam ?? '8', 10) || 8, 1), 50);
+        const where = {};
+        if (status && status !== 'all')
+            where.status = status;
+        if (search?.trim()) {
+            const value = search.trim();
+            where.OR = [
+                { findings: { contains: value, mode: 'insensitive' } },
+                { conclusion: { contains: value, mode: 'insensitive' } },
+                { request: { requestNumber: { contains: value, mode: 'insensitive' } } },
+                { request: { patientFirstName: { contains: value, mode: 'insensitive' } } },
+                { request: { patientLastName: { contains: value, mode: 'insensitive' } } },
+            ];
+        }
+        const [total, reports] = await Promise.all([
+            this.prisma.radiologyReport.count({ where }),
+            this.prisma.radiologyReport.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                skip: (page - 1) * limit,
+                take: limit,
+                include: {
+                    author: { select: { id: true, fullName: true } },
+                    request: {
+                        select: {
+                            id: true,
+                            requestNumber: true,
+                            patientFirstName: true,
+                            patientLastName: true,
+                            imagingType: true,
+                            imagingArea: true,
+                        },
+                    },
+                },
+            }),
+        ]);
+        return {
+            items: reports,
+            total,
+            page,
+            limit,
+            pages: Math.max(Math.ceil(total / limit), 1),
+        };
+    }
     async getReportsByRequest(requestId) {
         const reports = await this.prisma.radiologyReport.findMany({
             where: { requestId },
@@ -302,6 +348,16 @@ let ReportController = class ReportController {
     }
 };
 exports.ReportController = ReportController;
+__decorate([
+    (0, common_1.Get)(),
+    __param(0, (0, common_1.Query)('status')),
+    __param(1, (0, common_1.Query)('search')),
+    __param(2, (0, common_1.Query)('page')),
+    __param(3, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:returntype", Promise)
+], ReportController.prototype, "listReports", null);
 __decorate([
     (0, common_1.Get)('by-request/:requestId'),
     __param(0, (0, common_1.Param)('requestId')),

@@ -65,6 +65,58 @@ let PatientFileController = class PatientFileController {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async listPatients(status, imagingType, search, pageParam, limitParam) {
+        const page = Math.max(Number.parseInt(pageParam ?? '1', 10) || 1, 1);
+        const limit = Math.min(Math.max(Number.parseInt(limitParam ?? '8', 10) || 8, 1), 50);
+        const where = {};
+        if (status && status !== 'all')
+            where.status = status;
+        if (imagingType && imagingType !== 'all')
+            where.imagingType = imagingType;
+        if (search?.trim()) {
+            const value = search.trim();
+            where.OR = [
+                { requestNumber: { contains: value, mode: 'insensitive' } },
+                { patientFirstName: { contains: value, mode: 'insensitive' } },
+                { patientLastName: { contains: value, mode: 'insensitive' } },
+                { nationalId: { contains: value, mode: 'insensitive' } },
+                { phone: { contains: value, mode: 'insensitive' } },
+            ];
+        }
+        const [total, patients] = await Promise.all([
+            this.prisma.teleReportRequest.count({ where }),
+            this.prisma.teleReportRequest.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                skip: (page - 1) * limit,
+                take: limit,
+                select: {
+                    id: true,
+                    requestNumber: true,
+                    patientFirstName: true,
+                    patientLastName: true,
+                    nationalId: true,
+                    phone: true,
+                    age: true,
+                    gender: true,
+                    country: true,
+                    city: true,
+                    imagingType: true,
+                    imagingArea: true,
+                    status: true,
+                    createdAt: true,
+                    _count: { select: { reports: true } },
+                },
+            }),
+        ]);
+        return {
+            items: patients,
+            total,
+            page,
+            limit,
+            pages: Math.max(Math.ceil(total / limit), 1),
+        };
+    }
     async getPatientFile(id, auth) {
         const userId = extractUserId(auth);
         if (!userId)
@@ -138,6 +190,17 @@ let PatientFileController = class PatientFileController {
     }
 };
 exports.PatientFileController = PatientFileController;
+__decorate([
+    (0, common_1.Get)(),
+    __param(0, (0, common_1.Query)('status')),
+    __param(1, (0, common_1.Query)('imagingType')),
+    __param(2, (0, common_1.Query)('search')),
+    __param(3, (0, common_1.Query)('page')),
+    __param(4, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, String, String]),
+    __metadata("design:returntype", Promise)
+], PatientFileController.prototype, "listPatients", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),

@@ -12,6 +12,9 @@ import { AuthController } from './auth.controller';
 import { DashboardController } from './dashboard.controller';
 import { PatientFileController } from './patient-file.controller';
 import { ReportController } from './report.controller';
+import { InfoRequestController } from './info-request.controller';
+import { ReportArchiveController } from './report-archive.controller';
+import { DoctorProfileController } from './doctor-profile.controller';
 
 @Module({
   controllers: [
@@ -27,6 +30,9 @@ import { ReportController } from './report.controller';
     DashboardController,
     PatientFileController,
     ReportController,
+    InfoRequestController,
+    ReportArchiveController,
+    DoctorProfileController,
   ],
   providers: [PrismaService],
 })
