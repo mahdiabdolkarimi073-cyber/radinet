@@ -24,6 +24,7 @@ const report_controller_1 = require("./report.controller");
 const info_request_controller_1 = require("./info-request.controller");
 const report_archive_controller_1 = require("./report-archive.controller");
 const doctor_profile_controller_1 = require("./doctor-profile.controller");
+const admin_dashboard_controller_1 = require("./admin-dashboard.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -45,6 +46,7 @@ exports.AppModule = AppModule = __decorate([
             info_request_controller_1.InfoRequestController,
             report_archive_controller_1.ReportArchiveController,
             doctor_profile_controller_1.DoctorProfileController,
+            admin_dashboard_controller_1.AdminDashboardController,
         ],
         providers: [prisma_service_1.PrismaService],
     })
