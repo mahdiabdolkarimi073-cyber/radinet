@@ -10,6 +10,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UnauthorizedException,
   UploadedFiles,
   UseInterceptors,
@@ -74,6 +75,64 @@ function imageFileFilter(_req: Express.Request, file: Express.Multer.File, cb: (
 @Controller('dashboard/reports')
 export class ReportController {
   constructor(private readonly prisma: PrismaService) {}
+
+  @Get()
+  async listReports(
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('page') pageParam?: string,
+    @Query('limit') limitParam?: string,
+  ) {
+    const page = Math.max(Number.parseInt(pageParam ?? '1', 10) || 1, 1);
+    const limit = Math.min(Math.max(Number.parseInt(limitParam ?? '8', 10) || 8, 1), 50);
+    const where: {
+      status?: string;
+      OR?: Array<Record<string, { contains: string; mode: 'insensitive' }>>;
+    } = {};
+
+    if (status && status !== 'all') where.status = status;
+    if (search?.trim()) {
+      const value = search.trim();
+      where.OR = [
+        { findings: { contains: value, mode: 'insensitive' } },
+        { conclusion: { contains: value, mode: 'insensitive' } },
+        { request: { requestNumber: { contains: value, mode: 'insensitive' } } },
+        { request: { patientFirstName: { contains: value, mode: 'insensitive' } } },
+        { request: { patientLastName: { contains: value, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [total, reports] = await Promise.all([
+      this.prisma.radiologyReport.count({ where }),
+      this.prisma.radiologyReport.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          author: { select: { id: true, fullName: true } },
+          request: {
+            select: {
+              id: true,
+              requestNumber: true,
+              patientFirstName: true,
+              patientLastName: true,
+              imagingType: true,
+              imagingArea: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      items: reports,
+      total,
+      page,
+      limit,
+      pages: Math.max(Math.ceil(total / limit), 1),
+    };
+  }
 
   @Get('by-request/:requestId')
   async getReportsByRequest(@Param('requestId') requestId: string) {

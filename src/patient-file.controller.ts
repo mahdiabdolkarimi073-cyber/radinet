@@ -4,6 +4,7 @@ import {
   Get,
   Headers,
   Param,
+  Query,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
@@ -24,6 +25,71 @@ function extractUserId(auth?: string): string | null {
 @Controller('dashboard/patients')
 export class PatientFileController {
   constructor(private readonly prisma: PrismaService) {}
+
+  @Get()
+  async listPatients(
+    @Query('status') status?: string,
+    @Query('imagingType') imagingType?: string,
+    @Query('search') search?: string,
+    @Query('page') pageParam?: string,
+    @Query('limit') limitParam?: string,
+  ) {
+    const page = Math.max(Number.parseInt(pageParam ?? '1', 10) || 1, 1);
+    const limit = Math.min(Math.max(Number.parseInt(limitParam ?? '8', 10) || 8, 1), 50);
+    const where: {
+      status?: string;
+      imagingType?: string;
+      OR?: Array<Record<string, { contains: string; mode: 'insensitive' }>>;
+    } = {};
+
+    if (status && status !== 'all') where.status = status;
+    if (imagingType && imagingType !== 'all') where.imagingType = imagingType;
+    if (search?.trim()) {
+      const value = search.trim();
+      where.OR = [
+        { requestNumber: { contains: value, mode: 'insensitive' } },
+        { patientFirstName: { contains: value, mode: 'insensitive' } },
+        { patientLastName: { contains: value, mode: 'insensitive' } },
+        { nationalId: { contains: value, mode: 'insensitive' } },
+        { phone: { contains: value, mode: 'insensitive' } },
+      ];
+    }
+
+    const [total, patients] = await Promise.all([
+      this.prisma.teleReportRequest.count({ where }),
+      this.prisma.teleReportRequest.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        select: {
+          id: true,
+          requestNumber: true,
+          patientFirstName: true,
+          patientLastName: true,
+          nationalId: true,
+          phone: true,
+          age: true,
+          gender: true,
+          country: true,
+          city: true,
+          imagingType: true,
+          imagingArea: true,
+          status: true,
+          createdAt: true,
+          _count: { select: { reports: true } },
+        },
+      }),
+    ]);
+
+    return {
+      items: patients,
+      total,
+      page,
+      limit,
+      pages: Math.max(Math.ceil(total / limit), 1),
+    };
+  }
 
   @Get(':id')
   async getPatientFile(@Param('id') id: string, @Headers('authorization') auth?: string) {
