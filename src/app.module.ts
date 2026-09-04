@@ -18,6 +18,18 @@ import { DoctorProfileController } from './doctor-profile.controller';
 import { AdminDashboardController } from './admin-dashboard.controller';
 import { AdminUserController } from './admin-user.controller';
 import { AdminDoctorController } from './admin-doctor.controller';
+import { AdminImagingCenterController } from './admin-imaging-center.controller';
+import { AdminOrganizationController } from './admin-organization.controller';
+import { AdminShopController } from './admin-shop.controller';
+import { AdminOrderController } from './admin-order.controller';
+import { AdminTeleReportController } from './admin-tele-report.controller';
+import { AdminAiTariffController } from './admin-ai-tariff.controller';
+import { AdminRoutingController } from './admin-routing.controller';
+import { AdminContentController } from './admin-content.controller';
+import { AdminNotificationController } from './admin-notification.controller';
+import { AdminDiscountController } from './admin-discount.controller';
+import { AdminReportController } from './admin-report.controller';
+import { AdminSettingsController } from './admin-settings.controller';
 
 @Module({
   controllers: [
@@ -39,6 +51,18 @@ import { AdminDoctorController } from './admin-doctor.controller';
     AdminDashboardController,
     AdminUserController,
     AdminDoctorController,
+    AdminImagingCenterController,
+    AdminOrganizationController,
+    AdminShopController,
+    AdminOrderController,
+    AdminTeleReportController,
+    AdminAiTariffController,
+    AdminRoutingController,
+    AdminContentController,
+    AdminNotificationController,
+    AdminDiscountController,
+    AdminReportController,
+    AdminSettingsController,
   ],
   providers: [PrismaService],
 })

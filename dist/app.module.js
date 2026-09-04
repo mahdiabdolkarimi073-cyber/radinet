@@ -27,6 +27,18 @@ const doctor_profile_controller_1 = require("./doctor-profile.controller");
 const admin_dashboard_controller_1 = require("./admin-dashboard.controller");
 const admin_user_controller_1 = require("./admin-user.controller");
 const admin_doctor_controller_1 = require("./admin-doctor.controller");
+const admin_imaging_center_controller_1 = require("./admin-imaging-center.controller");
+const admin_organization_controller_1 = require("./admin-organization.controller");
+const admin_shop_controller_1 = require("./admin-shop.controller");
+const admin_order_controller_1 = require("./admin-order.controller");
+const admin_tele_report_controller_1 = require("./admin-tele-report.controller");
+const admin_ai_tariff_controller_1 = require("./admin-ai-tariff.controller");
+const admin_routing_controller_1 = require("./admin-routing.controller");
+const admin_content_controller_1 = require("./admin-content.controller");
+const admin_notification_controller_1 = require("./admin-notification.controller");
+const admin_discount_controller_1 = require("./admin-discount.controller");
+const admin_report_controller_1 = require("./admin-report.controller");
+const admin_settings_controller_1 = require("./admin-settings.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -51,6 +63,18 @@ exports.AppModule = AppModule = __decorate([
             admin_dashboard_controller_1.AdminDashboardController,
             admin_user_controller_1.AdminUserController,
             admin_doctor_controller_1.AdminDoctorController,
+            admin_imaging_center_controller_1.AdminImagingCenterController,
+            admin_organization_controller_1.AdminOrganizationController,
+            admin_shop_controller_1.AdminShopController,
+            admin_order_controller_1.AdminOrderController,
+            admin_tele_report_controller_1.AdminTeleReportController,
+            admin_ai_tariff_controller_1.AdminAiTariffController,
+            admin_routing_controller_1.AdminRoutingController,
+            admin_content_controller_1.AdminContentController,
+            admin_notification_controller_1.AdminNotificationController,
+            admin_discount_controller_1.AdminDiscountController,
+            admin_report_controller_1.AdminReportController,
+            admin_settings_controller_1.AdminSettingsController,
         ],
         providers: [prisma_service_1.PrismaService],
     })
