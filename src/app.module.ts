@@ -16,6 +16,8 @@ import { InfoRequestController } from './info-request.controller';
 import { ReportArchiveController } from './report-archive.controller';
 import { DoctorProfileController } from './doctor-profile.controller';
 import { AdminDashboardController } from './admin-dashboard.controller';
+import { AdminUserController } from './admin-user.controller';
+import { AdminDoctorController } from './admin-doctor.controller';
 
 @Module({
   controllers: [
@@ -35,6 +37,8 @@ import { AdminDashboardController } from './admin-dashboard.controller';
     ReportArchiveController,
     DoctorProfileController,
     AdminDashboardController,
+    AdminUserController,
+    AdminDoctorController,
   ],
   providers: [PrismaService],
 })

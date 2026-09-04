@@ -440,6 +440,8 @@ model User {
   email String @unique
   passwordHash String @map("password_hash")
   role String @default("user") @map("role")
+  status String @default("active") @map("status")
+  country String @default("IR") @map("country")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   reports RadiologyReport[]
@@ -524,6 +526,9 @@ model DoctorProfile {
   languages String @default("")
   workplace String @default("")
   maxDailyReports Int @default(10) @map("max_daily_reports")
+  tariff Int @default(0) @map("tariff")
+  isActive Boolean @default(true) @map("is_active")
+  collaborationStatus String @default("pending") @map("collaboration_status")
   notificationEmail Boolean @default(true) @map("notification_email")
   notificationSms Boolean @default(false) @map("notification_sms")
   avatarUrl String? @map("avatar_url")
