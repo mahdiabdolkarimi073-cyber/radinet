@@ -39,6 +39,12 @@ const admin_notification_controller_1 = require("./admin-notification.controller
 const admin_discount_controller_1 = require("./admin-discount.controller");
 const admin_report_controller_1 = require("./admin-report.controller");
 const admin_settings_controller_1 = require("./admin-settings.controller");
+const support_ticket_controller_1 = require("./support-ticket.controller");
+const support_chat_controller_1 = require("./support-chat.controller");
+const support_chat_gateway_1 = require("./support-chat.gateway");
+const support_telereport_controller_1 = require("./support-telereport.controller");
+const support_review_controller_1 = require("./support-review.controller");
+const support_order_controller_1 = require("./support-order.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -75,7 +81,12 @@ exports.AppModule = AppModule = __decorate([
             admin_discount_controller_1.AdminDiscountController,
             admin_report_controller_1.AdminReportController,
             admin_settings_controller_1.AdminSettingsController,
+            support_ticket_controller_1.SupportTicketController,
+            support_chat_controller_1.SupportChatController,
+            support_telereport_controller_1.SupportTelereportController,
+            support_review_controller_1.SupportReviewController,
+            support_order_controller_1.SupportOrderController,
         ],
-        providers: [prisma_service_1.PrismaService],
+        providers: [prisma_service_1.PrismaService, support_chat_gateway_1.SupportChatGateway],
     })
 ], AppModule);

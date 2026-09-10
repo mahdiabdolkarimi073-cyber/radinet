@@ -96,7 +96,7 @@ export class AuthController {
       return { ok: false, error: 'ایمیل یا رمز عبور اشتباه است' };
     }
 
-    if (user.role !== 'radiologist' && user.role !== 'admin') {
+    if (user.role !== 'radiologist' && user.role !== 'admin' && user.role !== 'SUPPORT_EXPERT' && user.role !== 'support_expert' && user.role !== 'user') {
       return { ok: false, error: 'دسترسی مجاز نیست' };
     }
 

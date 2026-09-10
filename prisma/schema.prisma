@@ -449,8 +449,119 @@ model User {
   doctorProfile DoctorProfile?
   imagingCenterId String? @map("imaging_center_id") @db.Uuid
   imagingCenter ImagingCenter? @relation(fields: [imagingCenterId], references: [id], onDelete: SetNull)
+  tickets Ticket[]
+  ticketReplies TicketReply[]
+  assignedTickets Ticket[] @relation("AssignedExpert")
+  chatSessions ChatSession[]
+  expertChatSessions ChatSession[] @relation("ChatExpert")
+  chatMessages ChatMessage[]
+  reviews Review[]
+  reviewedReviews Review[] @relation("ReviewReviewer")
+  telereportNotifications TelereportNotification[]
   @@index([imagingCenterId])
   @@map("users")
+}
+
+// ── Support Tickets (تیکت‌های پشتیبانی) ──
+
+model Ticket {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subject String
+  message String @db.Text
+  status String @default("open")
+  priority String @default("medium")
+  userId String @map("user_id") @db.Uuid
+  assignedTo String? @map("assigned_to") @db.Uuid
+  category String @default("general")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expert User? @relation("AssignedExpert", fields: [assignedTo], references: [id], onDelete: SetNull)
+  replies TicketReply[]
+  @@index([status, createdAt])
+  @@index([priority])
+  @@index([assignedTo])
+  @@map("support_tickets")
+}
+
+model TicketReply {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticketId String @map("ticket_id") @db.Uuid
+  authorId String @map("author_id") @db.Uuid
+  message String @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  @@index([ticketId])
+  @@index([authorId])
+  @@map("support_ticket_replies")
+}
+
+// ── Chat Sessions (چت آنلاین) ──
+
+model ChatSession {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  expertId String? @map("expert_id") @db.Uuid
+  status String @default("waiting")
+  subject String @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expert User? @relation("ChatExpert", fields: [expertId], references: [id], onDelete: SetNull)
+  messages ChatMessage[]
+  @@index([status, createdAt])
+  @@index([expertId])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String @map("session_id") @db.Uuid
+  senderId String @map("sender_id") @db.Uuid
+  senderRole String @default("user")
+  content String @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  @@index([sessionId])
+  @@index([senderId])
+  @@map("chat_messages")
+}
+
+// ── Reviews (نظرات) ──
+
+model Review {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  targetType String @map("target_type")
+  targetId String @map("target_id") @db.Uuid
+  content String @db.Text
+  rating Int @default(5)
+  status String @default("pending")
+  rejectReason String? @db.Text @map("reject_reason")
+  reviewedAt DateTime? @map("reviewed_at")
+  reviewedBy String? @map("reviewed_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("ReviewReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+  @@map("support_reviews")
+}
+
+// ── Telereport Notifications (اعلان‌های تله‌ریپورت) ──
+
+model TelereportNotification {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestId String @map("request_id") @db.Uuid
+  recipient String
+  message String @db.Text
+  sentBy String? @map("sent_by") @db.Uuid
+  sentAt DateTime @default(now()) @map("sent_at")
+  sentByUser User? @relation(fields: [sentBy], references: [id], onDelete: SetNull)
+  @@index([requestId])
+  @@map("telereport_notifications")
 }
 
 // ── Radiology Reports ──

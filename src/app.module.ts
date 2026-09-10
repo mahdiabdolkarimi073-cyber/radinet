@@ -30,6 +30,13 @@ import { AdminNotificationController } from './admin-notification.controller';
 import { AdminDiscountController } from './admin-discount.controller';
 import { AdminReportController } from './admin-report.controller';
 import { AdminSettingsController } from './admin-settings.controller';
+import { SupportTicketController } from './support-ticket.controller';
+import { SupportChatController } from './support-chat.controller';
+import { SupportChatGateway } from './support-chat.gateway';
+import { SupportTelereportController } from './support-telereport.controller';
+import { SupportReviewController } from './support-review.controller';
+import { SupportOrderController } from './support-order.controller';
+import { UserPanelController } from './user-panel.controller';
 
 @Module({
   controllers: [
@@ -63,7 +70,13 @@ import { AdminSettingsController } from './admin-settings.controller';
     AdminDiscountController,
     AdminReportController,
     AdminSettingsController,
+    SupportTicketController,
+    SupportChatController,
+    SupportTelereportController,
+    SupportReviewController,
+    SupportOrderController,
+    UserPanelController,
   ],
-  providers: [PrismaService],
+  providers: [PrismaService, SupportChatGateway],
 })
 export class AppModule {}
