@@ -302,6 +302,7 @@ model ShopProduct {
 model ShopOrder {
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   orderNumber String @unique @map("order_number")
+  userId String? @map("user_id") @db.Uuid
   customerName String @map("customer_name")
   customerPhone String @map("customer_phone")
   customerEmail String? @map("customer_email")
@@ -333,10 +334,12 @@ model ShopOrder {
   // Checkout — payment
   paymentMethod String? @map("payment_method")
   items ShopOrderItem[]
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   @@index([status, createdAt])
   @@index([customerPhone])
+  @@index([userId])
   @@map("shop_orders")
 }
 
@@ -390,6 +393,7 @@ model ShopDiscount {
 model TeleReportRequest {
   id String @id @default(uuid()) @db.Uuid
   requestNumber String @unique @map("request_number")
+  userId String? @map("user_id") @db.Uuid
   country String
   language String
   patientFirstName String @map("patient_first_name")
@@ -412,11 +416,13 @@ model TeleReportRequest {
   status String @default("new")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
   attachments TeleReportAttachment[]
   reports RadiologyReport[]
   infoRequests InfoRequest[]
   @@index([status, createdAt])
   @@index([phone])
+  @@index([userId])
   @@map("tele_report_requests")
 }
 
@@ -458,6 +464,11 @@ model User {
   reviews Review[]
   reviewedReviews Review[] @relation("ReviewReviewer")
   telereportNotifications TelereportNotification[]
+  shopOrders ShopOrder[]
+  teleReportRequests TeleReportRequest[]
+  medicalReports MedicalReport[]
+  userTransactions UserTransaction[]
+  userNotifications UserNotification[]
   @@index([imagingCenterId])
   @@map("users")
 }
@@ -930,4 +941,47 @@ model SecuritySetting {
   settingValue Json @default("{}") @map("setting_value")
   updatedAt DateTime @updatedAt @map("updated_at")
   @@map("security_settings")
+}
+
+// ── User Panel: Medical Reports (گزارش‌های پزشکی کاربر) ──
+
+model MedicalReport {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  title String
+  type String @default("general")
+  fileUrl String? @map("file_url")
+  description String @default("") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([userId, createdAt])
+  @@map("medical_reports")
+}
+
+// ── User Panel: Transactions (تراکنش‌های کاربر) ──
+
+model UserTransaction {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  amount Decimal @db.Decimal(14, 0)
+  status String @default("paid") // paid | unpaid | refunded
+  invoiceRef String? @map("invoice_ref")
+  description String @default("") @db.Text
+  type String @default("shop") // shop | telereport | other
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([userId, createdAt])
+  @@map("user_transactions")
+}
+
+// ── User Panel: User Notifications (اعلان‌های شخصی کاربر) ──
+
+model UserNotification {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  title String
+  message String @db.Text
+  type String @default("general")
+  isRead Boolean @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([userId, createdAt])
+  @@map("user_notifications")
 }

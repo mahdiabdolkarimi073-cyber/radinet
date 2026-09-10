@@ -37,6 +37,7 @@ import { SupportTelereportController } from './support-telereport.controller';
 import { SupportReviewController } from './support-review.controller';
 import { SupportOrderController } from './support-order.controller';
 import { UserPanelController } from './user-panel.controller';
+import { PanelController } from './panel.controller';
 
 @Module({
   controllers: [
@@ -76,6 +77,7 @@ import { UserPanelController } from './user-panel.controller';
     SupportReviewController,
     SupportOrderController,
     UserPanelController,
+    PanelController,
   ],
   providers: [PrismaService, SupportChatGateway],
 })
