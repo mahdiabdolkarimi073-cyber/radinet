@@ -448,6 +448,7 @@ model User {
   role String @default("user") @map("role")
   status String @default("active") @map("status")
   country String @default("IR") @map("country")
+  organizationId String? @map("organization_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   reports RadiologyReport[]
@@ -455,6 +456,7 @@ model User {
   doctorProfile DoctorProfile?
   imagingCenterId String? @map("imaging_center_id") @db.Uuid
   imagingCenter ImagingCenter? @relation(fields: [imagingCenterId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   tickets Ticket[]
   ticketReplies TicketReply[]
   assignedTickets Ticket[] @relation("AssignedExpert")
@@ -469,7 +471,9 @@ model User {
   medicalReports MedicalReport[]
   userTransactions UserTransaction[]
   userNotifications UserNotification[]
+  orgStatusLogs OrgRequestStatusLog[]
   @@index([imagingCenterId])
+  @@index([organizationId])
   @@map("users")
 }
 
@@ -709,10 +713,14 @@ model Organization {
   contactPerson String? @map("contact_person")
   contactPhone String? @map("contact_phone")
   contactEmail String? @map("contact_email")
+  logo String?
   isActive Boolean @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  users User[]
   contracts OrganizationContract[]
+  orgInvoices OrgInvoice[]
+  settings OrgSettings?
   @@map("organizations")
 }
 
@@ -736,6 +744,7 @@ model OrganizationContract {
   updatedAt DateTime @updatedAt @map("updated_at")
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   center ImagingCenter? @relation(fields: [centerId], references: [id], onDelete: SetNull)
+  invoices OrgInvoice[]
   @@index([organizationId])
   @@index([centerId])
   @@index([status])
@@ -953,6 +962,7 @@ model MedicalReport {
   fileUrl String? @map("file_url")
   description String @default("") @db.Text
   createdAt DateTime @default(now()) @map("created_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, createdAt])
   @@map("medical_reports")
 }
@@ -968,6 +978,7 @@ model UserTransaction {
   description String @default("") @db.Text
   type String @default("shop") // shop | telereport | other
   createdAt DateTime @default(now()) @map("created_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, createdAt])
   @@map("user_transactions")
 }
@@ -982,6 +993,68 @@ model UserNotification {
   type String @default("general")
   isRead Boolean @default(false) @map("is_read")
   createdAt DateTime @default(now()) @map("created_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, createdAt])
   @@map("user_notifications")
+}
+
+// ── Organization Panel: Invoices (فاکتورهای سازمان) ──
+
+model OrgInvoice {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  contractId String @map("contract_id") @db.Uuid
+  invoiceNumber String @unique @map("invoice_number")
+  amount Decimal @db.Decimal(14, 0)
+  dueDate DateTime @map("due_date")
+  status String @default("unpaid") // paid | unpaid | overdue
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contract OrganizationContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  payments OrgPayment[]
+  @@index([organizationId])
+  @@index([contractId])
+  @@index([status])
+  @@map("org_invoices")
+}
+
+// ── Organization Panel: Payments (پرداخت‌های سازمان) ──
+
+model OrgPayment {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId String @map("invoice_id") @db.Uuid
+  amount Decimal @db.Decimal(14, 0)
+  paidAt DateTime @default(now()) @map("paid_at")
+  method String @default("bank_transfer")
+  reference String @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+  invoice OrgInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  @@index([invoiceId])
+  @@map("org_payments")
+}
+
+// ── Organization Panel: Settings (تنظیمات سازمان) ──
+
+model OrgSettings {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId String @unique @map("org_id") @db.Uuid
+  settings Json @default("{\"staffCanSubmit\":true,\"staffCanViewReports\":true}")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  @@map("org_settings")
+}
+
+// ── Organization Panel: Request Status Logs (تاریخچه وضعیت درخواست) ──
+
+model OrgRequestStatusLog {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestId String @map("request_id") @db.Uuid
+  status String
+  note String @default("") @db.Text
+  createdBy String? @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  user User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  @@index([requestId])
+  @@map("org_request_status_logs")
 }

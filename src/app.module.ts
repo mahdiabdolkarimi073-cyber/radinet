@@ -38,6 +38,7 @@ import { SupportReviewController } from './support-review.controller';
 import { SupportOrderController } from './support-order.controller';
 import { UserPanelController } from './user-panel.controller';
 import { PanelController } from './panel.controller';
+import { OrgController } from './org.controller';
 
 @Module({
   controllers: [
@@ -78,6 +79,7 @@ import { PanelController } from './panel.controller';
     SupportOrderController,
     UserPanelController,
     PanelController,
+    OrgController,
   ],
   providers: [PrismaService, SupportChatGateway],
 })
