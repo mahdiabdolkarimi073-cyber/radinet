@@ -96,7 +96,7 @@ export class AuthController {
       return { ok: false, error: 'ایمیل یا رمز عبور اشتباه است' };
     }
 
-    if (user.role !== 'radiologist' && user.role !== 'admin' && user.role !== 'SUPPORT_EXPERT' && user.role !== 'support_expert' && user.role !== 'user' && user.role !== 'ORG_ADMIN' && user.role !== 'ORG_STAFF') {
+    if (user.role !== 'radiologist' && user.role !== 'admin' && user.role !== 'SUPPORT_EXPERT' && user.role !== 'support_expert' && user.role !== 'user' && user.role !== 'ORG_ADMIN' && user.role !== 'ORG_STAFF' && user.role !== 'RADIANT_AGENCY') {
       return { ok: false, error: 'دسترسی مجاز نیست' };
     }
 
