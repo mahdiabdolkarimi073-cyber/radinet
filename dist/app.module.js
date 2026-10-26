@@ -39,12 +39,17 @@ const admin_notification_controller_1 = require("./admin-notification.controller
 const admin_discount_controller_1 = require("./admin-discount.controller");
 const admin_report_controller_1 = require("./admin-report.controller");
 const admin_settings_controller_1 = require("./admin-settings.controller");
+const article_controller_1 = require("./article.controller");
+const admin_article_controller_1 = require("./admin-article.controller");
 const support_ticket_controller_1 = require("./support-ticket.controller");
 const support_chat_controller_1 = require("./support-chat.controller");
 const support_chat_gateway_1 = require("./support-chat.gateway");
 const support_telereport_controller_1 = require("./support-telereport.controller");
 const support_review_controller_1 = require("./support-review.controller");
 const support_order_controller_1 = require("./support-order.controller");
+const user_panel_controller_1 = require("./user-panel.controller");
+const panel_controller_1 = require("./panel.controller");
+const org_controller_1 = require("./org.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -52,6 +57,8 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         controllers: [
             about_controller_1.AboutController,
+            article_controller_1.ArticleController,
+            admin_article_controller_1.AdminArticleController,
             consultation_controller_1.ConsultationController,
             contact_controller_1.ContactController,
             legal_controller_1.LegalController,
@@ -86,6 +93,9 @@ exports.AppModule = AppModule = __decorate([
             support_telereport_controller_1.SupportTelereportController,
             support_review_controller_1.SupportReviewController,
             support_order_controller_1.SupportOrderController,
+            user_panel_controller_1.UserPanelController,
+            panel_controller_1.PanelController,
+            org_controller_1.OrgController,
         ],
         providers: [prisma_service_1.PrismaService, support_chat_gateway_1.SupportChatGateway],
     })

@@ -30,6 +30,8 @@ import { AdminNotificationController } from './admin-notification.controller';
 import { AdminDiscountController } from './admin-discount.controller';
 import { AdminReportController } from './admin-report.controller';
 import { AdminSettingsController } from './admin-settings.controller';
+import { ArticleController } from './article.controller';
+import { AdminArticleController } from './admin-article.controller';
 import { SupportTicketController } from './support-ticket.controller';
 import { SupportChatController } from './support-chat.controller';
 import { SupportChatGateway } from './support-chat.gateway';
@@ -43,6 +45,8 @@ import { OrgController } from './org.controller';
 @Module({
   controllers: [
     AboutController,
+    ArticleController,
+    AdminArticleController,
     ConsultationController,
     ContactController,
     LegalController,
