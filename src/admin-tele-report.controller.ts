@@ -249,6 +249,72 @@ export class AdminTeleReportController {
     });
   }
 
+  @Patch(':id/reports/:reportId')
+  async updateReport(
+    @Headers('authorization') auth: string,
+    @Param('id') id: string,
+    @Param('reportId') reportId: string,
+    @Body() body: { findings?: string; conclusion?: string; status?: string; signed?: boolean; signatureName?: string },
+  ) {
+    verifyAdmin(auth);
+
+    const report = await this.prisma.radiologyReport.findUnique({ where: { id: reportId } });
+    if (!report || report.requestId !== id) throw new NotFoundException('گزارش رادیولوژی یافت نشد');
+
+    const data: Record<string, unknown> = {};
+    if (body.findings !== undefined) data.findings = body.findings;
+    if (body.conclusion !== undefined) data.conclusion = body.conclusion;
+    if (body.status !== undefined) data.status = body.status;
+    if (body.signed !== undefined) {
+      data.signed = body.signed;
+      data.signedAt = body.signed ? new Date() : null;
+    }
+    if (body.signatureName !== undefined) data.signatureName = body.signatureName;
+
+    const updated = await this.prisma.radiologyReport.update({
+      where: { id: reportId },
+      data,
+      include: { author: { select: { id: true, fullName: true } }, images: true },
+    });
+
+    if (body.status === 'final' || body.signed) {
+      await this.prisma.teleReportRequest.update({
+        where: { id },
+        data: { status: 'completed' },
+      });
+    }
+
+    return updated;
+  }
+
+  @Patch(':id/ai-verify')
+  async verifyAiAnalysis(
+    @Headers('authorization') auth: string,
+    @Param('id') id: string,
+    @Body() body: { approved?: boolean; notes?: string },
+  ) {
+    verifyAdmin(auth);
+
+    const request = await this.prisma.teleReportRequest.findUnique({ where: { id } });
+    if (!request) throw new NotFoundException('درخواست یافت نشد');
+
+    // Create or update a status log
+    await this.prisma.orgRequestStatusLog.create({
+      data: {
+        requestId: id,
+        status: body.approved ? 'ai_approved' : 'ai_rejected',
+        note: body.notes ?? (body.approved ? 'تحلیل هوش مصنوعی توسط ادمین تأیید گردید.' : 'تحلیل هوش مصنوعی رد شد.'),
+      },
+    });
+
+    return {
+      ok: true,
+      requestId: id,
+      aiApproved: body.approved ?? true,
+      message: body.approved ? 'تحلیل هوش مصنوعی تأیید شد.' : 'تحلیل هوش مصنوعی رد شد.',
+    };
+  }
+
   // ── Tariffs ──
 
   @Get('tariffs/list')

@@ -373,6 +373,57 @@ let AdminTeleReportController = class AdminTeleReportController {
             },
         });
     }
+    async updateReport(auth, id, reportId, body) {
+        verifyAdmin(auth);
+        const report = await this.prisma.radiologyReport.findUnique({ where: { id: reportId } });
+        if (!report || report.requestId !== id)
+            throw new common_1.NotFoundException('گزارش رادیولوژی یافت نشد');
+        const data = {};
+        if (body.findings !== undefined)
+            data.findings = body.findings;
+        if (body.conclusion !== undefined)
+            data.conclusion = body.conclusion;
+        if (body.status !== undefined)
+            data.status = body.status;
+        if (body.signed !== undefined) {
+            data.signed = body.signed;
+            data.signedAt = body.signed ? new Date() : null;
+        }
+        if (body.signatureName !== undefined)
+            data.signatureName = body.signatureName;
+        const updated = await this.prisma.radiologyReport.update({
+            where: { id: reportId },
+            data,
+            include: { author: { select: { id: true, fullName: true } }, images: true },
+        });
+        if (body.status === 'final' || body.signed) {
+            await this.prisma.teleReportRequest.update({
+                where: { id },
+                data: { status: 'completed' },
+            });
+        }
+        return updated;
+    }
+    async verifyAiAnalysis(auth, id, body) {
+        verifyAdmin(auth);
+        const request = await this.prisma.teleReportRequest.findUnique({ where: { id } });
+        if (!request)
+            throw new common_1.NotFoundException('درخواست یافت نشد');
+        // Create or update a status log
+        await this.prisma.orgRequestStatusLog.create({
+            data: {
+                requestId: id,
+                status: body.approved ? 'ai_approved' : 'ai_rejected',
+                note: body.notes ?? (body.approved ? 'تحلیل هوش مصنوعی توسط ادمین تأیید گردید.' : 'تحلیل هوش مصنوعی رد شد.'),
+            },
+        });
+        return {
+            ok: true,
+            requestId: id,
+            aiApproved: body.approved ?? true,
+            message: body.approved ? 'تحلیل هوش مصنوعی تأیید شد.' : 'تحلیل هوش مصنوعی رد شد.',
+        };
+    }
     // ── Tariffs ──
     async listTariffs(auth) {
         verifyAdmin(auth);
@@ -474,6 +525,25 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], AdminTeleReportController.prototype, "getRequestReports", null);
+__decorate([
+    (0, common_1.Patch)(':id/reports/:reportId'),
+    __param(0, (0, common_1.Headers)('authorization')),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Param)('reportId')),
+    __param(3, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminTeleReportController.prototype, "updateReport", null);
+__decorate([
+    (0, common_1.Patch)(':id/ai-verify'),
+    __param(0, (0, common_1.Headers)('authorization')),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminTeleReportController.prototype, "verifyAiAnalysis", null);
 __decorate([
     (0, common_1.Get)('tariffs/list'),
     __param(0, (0, common_1.Headers)('authorization')),

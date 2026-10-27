@@ -131,6 +131,32 @@ __decorate([
     (0, class_validator_1.IsIn)(['approved', 'pending', 'rejected']),
     __metadata("design:type", String)
 ], UpdateDoctorDto.prototype, "collaborationStatus", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateDoctorDto.prototype, "biography", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateDoctorDto.prototype, "education", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateDoctorDto.prototype, "certifications", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateDoctorDto.prototype, "languages", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdateDoctorDto.prototype, "experienceYears", void 0);
 let AdminDoctorController = class AdminDoctorController {
     constructor(prisma) {
         this.prisma = prisma;
@@ -298,6 +324,16 @@ let AdminDoctorController = class AdminDoctorController {
             data.isActive = dto.isActive;
         if (dto.collaborationStatus !== undefined)
             data.collaborationStatus = dto.collaborationStatus;
+        if (dto.biography !== undefined)
+            data.biography = dto.biography;
+        if (dto.education !== undefined)
+            data.education = dto.education;
+        if (dto.certifications !== undefined)
+            data.certifications = dto.certifications;
+        if (dto.languages !== undefined)
+            data.languages = dto.languages;
+        if (dto.experienceYears !== undefined)
+            data.experienceYears = dto.experienceYears;
         if (Object.keys(data).length === 0)
             throw new common_1.BadRequestException('هیچ فیلدی برای به‌روزرسانی ارسال نشده است');
         return this.prisma.doctorProfile.update({
@@ -311,6 +347,11 @@ let AdminDoctorController = class AdminDoctorController {
                 subSpecialty: true,
                 licenseNumber: true,
                 workplace: true,
+                experienceYears: true,
+                biography: true,
+                education: true,
+                certifications: true,
+                languages: true,
                 maxDailyReports: true,
                 tariff: true,
                 isActive: true,

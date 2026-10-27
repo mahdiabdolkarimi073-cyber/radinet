@@ -82,7 +82,7 @@ __decorate([
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "password", void 0);
 __decorate([
-    (0, class_validator_1.IsIn)(['admin', 'radiologist', 'user']),
+    (0, class_validator_1.IsIn)(['admin', 'radiologist', 'doctor', 'support_expert', 'SUPPORT_EXPERT', 'ORG_ADMIN', 'ORG_STAFF', 'user']),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "role", void 0);
 __decorate([
@@ -90,6 +90,16 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "country", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "organizationId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "imagingCenterId", void 0);
 class UpdateUserDto {
 }
 __decorate([
@@ -99,7 +109,7 @@ __decorate([
 ], UpdateUserDto.prototype, "fullName", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsIn)(['admin', 'radiologist', 'user']),
+    (0, class_validator_1.IsIn)(['admin', 'radiologist', 'doctor', 'support_expert', 'SUPPORT_EXPERT', 'ORG_ADMIN', 'ORG_STAFF', 'user']),
     __metadata("design:type", String)
 ], UpdateUserDto.prototype, "role", void 0);
 __decorate([
@@ -112,6 +122,16 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateUserDto.prototype, "status", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateUserDto.prototype, "organizationId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateUserDto.prototype, "imagingCenterId", void 0);
 class UserQueryDto {
 }
 __decorate([
@@ -213,6 +233,10 @@ let AdminUserController = class AdminUserController {
                 role: true,
                 status: true,
                 country: true,
+                organizationId: true,
+                imagingCenterId: true,
+                organization: { select: { id: true, name: true, slug: true } },
+                imagingCenter: { select: { id: true, name: true, slug: true } },
                 createdAt: true,
                 updatedAt: true,
                 doctorProfile: true,
@@ -220,42 +244,86 @@ let AdminUserController = class AdminUserController {
                     select: {
                         reports: true,
                         infoRequests: true,
+                        shopOrders: true,
+                        teleReportRequests: true,
+                        tickets: true,
                     },
                 },
             },
         });
         if (!user)
             throw new common_1.NotFoundException('کاربر یافت نشد');
-        const recentReports = await this.prisma.radiologyReport.findMany({
-            where: { authorId: id },
-            orderBy: { createdAt: 'desc' },
-            take: 10,
-            select: {
-                id: true,
-                status: true,
-                signed: true,
-                createdAt: true,
-                updatedAt: true,
-                request: { select: { requestNumber: true, patientFirstName: true, patientLastName: true } },
-            },
-        });
-        const recentInfoRequests = await this.prisma.infoRequest.findMany({
-            where: { authorId: id },
-            orderBy: { createdAt: 'desc' },
-            take: 10,
-            select: {
-                id: true,
-                title: true,
-                status: true,
-                createdAt: true,
-                request: { select: { requestNumber: true } },
-            },
-        });
+        const [recentReports, recentInfoRequests, recentOrders, recentRequests, recentTickets] = await Promise.all([
+            this.prisma.radiologyReport.findMany({
+                where: { authorId: id },
+                orderBy: { createdAt: 'desc' },
+                take: 10,
+                select: {
+                    id: true,
+                    status: true,
+                    signed: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    request: { select: { requestNumber: true, patientFirstName: true, patientLastName: true } },
+                },
+            }),
+            this.prisma.infoRequest.findMany({
+                where: { authorId: id },
+                orderBy: { createdAt: 'desc' },
+                take: 10,
+                select: {
+                    id: true,
+                    title: true,
+                    status: true,
+                    createdAt: true,
+                    request: { select: { requestNumber: true } },
+                },
+            }),
+            this.prisma.shopOrder.findMany({
+                where: { userId: id },
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+                select: {
+                    id: true,
+                    orderNumber: true,
+                    total: true,
+                    status: true,
+                    createdAt: true,
+                },
+            }),
+            this.prisma.teleReportRequest.findMany({
+                where: { userId: id },
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+                select: {
+                    id: true,
+                    requestNumber: true,
+                    imagingType: true,
+                    status: true,
+                    createdAt: true,
+                },
+            }),
+            this.prisma.ticket.findMany({
+                where: { userId: id },
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+                select: {
+                    id: true,
+                    subject: true,
+                    status: true,
+                    priority: true,
+                    createdAt: true,
+                },
+            }),
+        ]);
         return {
             user,
             activity: {
                 reports: recentReports,
                 infoRequests: recentInfoRequests,
+                orders: recentOrders,
+                requests: recentRequests,
+                tickets: recentTickets,
             },
         };
     }
@@ -273,6 +341,8 @@ let AdminUserController = class AdminUserController {
                 role: dto.role,
                 country: dto.country ?? 'IR',
                 status: 'active',
+                organizationId: dto.organizationId || null,
+                imagingCenterId: dto.imagingCenterId || null,
             },
             select: {
                 id: true,
@@ -281,6 +351,8 @@ let AdminUserController = class AdminUserController {
                 role: true,
                 country: true,
                 status: true,
+                organizationId: true,
+                imagingCenterId: true,
                 createdAt: true,
             },
         });
@@ -300,6 +372,10 @@ let AdminUserController = class AdminUserController {
             data.country = dto.country;
         if (dto.status !== undefined)
             data.status = dto.status;
+        if (dto.organizationId !== undefined)
+            data.organizationId = dto.organizationId || null;
+        if (dto.imagingCenterId !== undefined)
+            data.imagingCenterId = dto.imagingCenterId || null;
         return this.prisma.user.update({
             where: { id },
             data,
@@ -310,16 +386,30 @@ let AdminUserController = class AdminUserController {
                 role: true,
                 country: true,
                 status: true,
+                organizationId: true,
+                imagingCenterId: true,
                 updatedAt: true,
             },
         });
     }
     async deleteUser(auth, id) {
-        verifyAdmin(auth);
+        const admin = verifyAdmin(auth);
+        if (admin.sub === id) {
+            throw new common_1.BadRequestException('امکان حذف حساب کاربری مدیر جاری وجود ندارد');
+        }
         const user = await this.prisma.user.findUnique({ where: { id } });
         if (!user)
             throw new common_1.NotFoundException('کاربر یافت نشد');
-        await this.prisma.user.delete({ where: { id } });
+        await this.prisma.$transaction(async (tx) => {
+            // Disconnect assigned tickets and chat sessions
+            await tx.ticket.updateMany({ where: { assignedTo: id }, data: { assignedTo: null } });
+            await tx.chatSession.updateMany({ where: { expertId: id }, data: { expertId: null } });
+            // Set author to null on reports and info requests if authorId is nullable
+            await tx.radiologyReport.updateMany({ where: { authorId: id }, data: { authorId: null } });
+            await tx.infoRequest.updateMany({ where: { authorId: id }, data: { authorId: null } });
+            // Delete user
+            await tx.user.delete({ where: { id } });
+        });
         return { ok: true };
     }
 };

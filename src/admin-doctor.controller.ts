@@ -44,6 +44,11 @@ class UpdateDoctorDto {
   @IsOptional() @IsInt() @Min(0) tariff?: number;
   @IsOptional() @IsBoolean() isActive?: boolean;
   @IsOptional() @IsIn(['approved', 'pending', 'rejected']) collaborationStatus?: string;
+  @IsOptional() @IsString() biography?: string;
+  @IsOptional() @IsString() education?: string;
+  @IsOptional() @IsString() certifications?: string;
+  @IsOptional() @IsString() languages?: string;
+  @IsOptional() @IsInt() @Min(0) experienceYears?: number;
 }
 
 @Controller('admin/doctors')
@@ -221,6 +226,11 @@ export class AdminDoctorController {
     if (dto.tariff !== undefined) data.tariff = dto.tariff;
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.collaborationStatus !== undefined) data.collaborationStatus = dto.collaborationStatus;
+    if (dto.biography !== undefined) data.biography = dto.biography;
+    if (dto.education !== undefined) data.education = dto.education;
+    if (dto.certifications !== undefined) data.certifications = dto.certifications;
+    if (dto.languages !== undefined) data.languages = dto.languages;
+    if (dto.experienceYears !== undefined) data.experienceYears = dto.experienceYears;
 
     if (Object.keys(data).length === 0) throw new BadRequestException('هیچ فیلدی برای به‌روزرسانی ارسال نشده است');
 
@@ -235,6 +245,11 @@ export class AdminDoctorController {
         subSpecialty: true,
         licenseNumber: true,
         workplace: true,
+        experienceYears: true,
+        biography: true,
+        education: true,
+        certifications: true,
+        languages: true,
         maxDailyReports: true,
         tariff: true,
         isActive: true,

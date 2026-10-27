@@ -88,7 +88,7 @@ export class AdminDiscountController {
       ];
     }
 
-    const [total, items] = await Promise.all([
+    const [total, rawItems] = await Promise.all([
       this.prisma.shopDiscount.count({ where }),
       this.prisma.shopDiscount.findMany({
         where,
@@ -98,6 +98,18 @@ export class AdminDiscountController {
       }),
     ]);
 
+    const items = rawItems.map((d) => {
+      const match = d.description.match(/\[targetUser:([^\]]+)\]/);
+      const targetUserId = match ? match[1] : null;
+      const cleanDesc = d.description.replace(/\[targetUser:[^\]]+\]/, '').trim();
+      return {
+        ...d,
+        description: cleanDesc,
+        targetUserId,
+        isUserSpecific: Boolean(targetUserId),
+      };
+    });
+
     return { items, total, page, limit, pages: Math.max(Math.ceil(total / limit), 1) };
   }
 
@@ -106,7 +118,17 @@ export class AdminDiscountController {
     verifyAdmin(auth);
     const discount = await this.prisma.shopDiscount.findUnique({ where: { id } });
     if (!discount) throw new NotFoundException('کد تخفیف یافت نشد');
-    return discount;
+
+    const match = discount.description.match(/\[targetUser:([^\]]+)\]/);
+    const targetUserId = match ? match[1] : null;
+    const cleanDesc = discount.description.replace(/\[targetUser:[^\]]+\]/, '').trim();
+
+    return {
+      ...discount,
+      description: cleanDesc,
+      targetUserId,
+      isUserSpecific: Boolean(targetUserId),
+    };
   }
 
   @Post()
@@ -121,10 +143,13 @@ export class AdminDiscountController {
       if (!user) throw new BadRequestException('کاربر هدف یافت نشد');
     }
 
+    const rawDesc = (dto.description ?? '').trim();
+    const finalDesc = dto.targetUserId ? `${rawDesc} [targetUser:${dto.targetUserId}]`.trim() : rawDesc;
+
     return this.prisma.shopDiscount.create({
       data: {
         code: dto.code,
-        description: dto.description ?? '',
+        description: finalDesc,
         type: dto.type,
         value: dto.value,
         minOrderAmount: dto.minOrderAmount,
@@ -149,7 +174,16 @@ export class AdminDiscountController {
     if (!discount) throw new NotFoundException('کد تخفیف یافت نشد');
 
     const data: Record<string, unknown> = {};
-    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.description !== undefined || dto.targetUserId !== undefined) {
+      const baseDesc = dto.description !== undefined
+        ? dto.description.trim()
+        : discount.description.replace(/\[targetUser:[^\]]+\]/, '').trim();
+      const currentTargetUser = dto.targetUserId !== undefined
+        ? dto.targetUserId
+        : (discount.description.match(/\[targetUser:([^\]]+)\]/)?.[1] ?? null);
+
+      data.description = currentTargetUser ? `${baseDesc} [targetUser:${currentTargetUser}]`.trim() : baseDesc;
+    }
     if (dto.type !== undefined) data.type = dto.type;
     if (dto.value !== undefined) data.value = dto.value;
     if (dto.minOrderAmount !== undefined) data.minOrderAmount = dto.minOrderAmount;

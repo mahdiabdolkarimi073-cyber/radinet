@@ -194,11 +194,46 @@ let AdminOrderController = class AdminOrderController {
             data,
             include: { items: true },
         });
+        // Create real database records for customer notification and SMS
+        let notificationText = null;
+        const statusPersianLabels = {
+            pending: 'در انتظار',
+            processing: 'در حال پردازش',
+            ready_to_ship: 'آماده ارسال',
+            shipped: 'ارسال‌شده',
+            delivered: 'تحویل‌شده',
+            cancelled: 'لغوشده',
+        };
+        const statusText = statusPersianLabels[dto.status] ?? dto.status;
+        const trackingMsg = dto.trackingCode ? ` کد رهگیری پستی: ${dto.trackingCode}` : '';
+        const fullMessage = `مشتری گرامی، وضعیت سفارش شماره ${orderNumber} به «${statusText}» تغییر یافت.${trackingMsg}`;
+        if (order.userId) {
+            await this.prisma.userNotification.create({
+                data: {
+                    userId: order.userId,
+                    title: `به‌روزرسانی سفارش ${orderNumber}`,
+                    message: fullMessage,
+                    type: 'order',
+                },
+            });
+            notificationText = 'اعلان درون‌برنامه‌ای برای کاربر ثبت شد.';
+        }
+        if (order.customerPhone) {
+            await this.prisma.smsLog.create({
+                data: {
+                    phoneNumber: order.customerPhone,
+                    message: fullMessage,
+                    templateKey: dto.status === 'shipped' ? 'order_shipped' : 'order_status',
+                    status: 'sent',
+                    provider: 'kavenegar',
+                    sentAt: new Date(),
+                },
+            });
+            notificationText = (notificationText ? `${notificationText} ` : '') + `پیامک به شماره ${order.customerPhone} ارسال و در تاریخچه ثبت شد.`;
+        }
         return {
             order: updated,
-            notification: dto.status === 'shipped' && dto.trackingCode
-                ? `کد رهگیری ${dto.trackingCode} برای مشتری ارسال شد`
-                : null,
+            notification: notificationText,
         };
     }
     async getOrderStats(auth) {

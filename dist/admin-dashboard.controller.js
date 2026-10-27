@@ -70,7 +70,7 @@ let AdminDashboardController = class AdminDashboardController {
     }
     async getStats(auth) {
         this.verifyAdmin(auth);
-        const [totalUsers, totalDoctors, totalRadiologists, totalOrders, totalRequests, totalReports, totalProducts, totalCategories, recentOrders, recentRequests, recentReports, recentUsers,] = await Promise.all([
+        const [totalUsers, totalDoctors, totalRadiologists, totalOrders, totalRequests, totalReports, totalProducts, totalCategories, totalCenters, totalOrganizations, recentOrders, recentRequests, recentReports, recentUsers, recentNotifications,] = await Promise.all([
             this.prisma.user.count(),
             this.prisma.doctorProfile.count(),
             this.prisma.user.count({ where: { role: 'radiologist' } }),
@@ -79,16 +79,14 @@ let AdminDashboardController = class AdminDashboardController {
             this.prisma.radiologyReport.count(),
             this.prisma.shopProduct.count(),
             this.prisma.shopCategory.count(),
+            this.prisma.imagingCenter.count(),
+            this.prisma.organization.count(),
             this.prisma.shopOrder.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { orderNumber: true, customerName: true, total: true, status: true, createdAt: true } }),
             this.prisma.teleReportRequest.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { requestNumber: true, patientFirstName: true, patientLastName: true, imagingType: true, status: true, createdAt: true } }),
             this.prisma.radiologyReport.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, status: true, signed: true, createdAt: true, request: { select: { requestNumber: true, patientFirstName: true, patientLastName: true } } } }),
             this.prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, fullName: true, email: true, role: true, createdAt: true } }),
+            this.prisma.notification.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, title: true, message: true, type: true, status: true, createdAt: true } }),
         ]);
-        const centers = await this.prisma.doctorProfile.findMany({
-            where: { workplace: { not: '' } },
-            select: { workplace: true },
-            distinct: ['workplace'],
-        });
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -105,10 +103,27 @@ let AdminDashboardController = class AdminDashboardController {
             where: { paymentStatus: 'paid' },
             _sum: { total: true },
         });
-        const teleReportPaidRequests = await this.prisma.teleReportRequest.count({
-            where: { status: 'completed' },
+        const teleReportTxAgg = await this.prisma.userTransaction.aggregate({
+            where: { type: 'telereport', status: 'paid' },
+            _sum: { amount: true },
         });
-        const teleReportRevenue = teleReportPaidRequests * 390000;
+        let teleReportRevenue = Number(teleReportTxAgg._sum.amount ?? 0);
+        if (teleReportRevenue === 0) {
+            const completedRequests = await this.prisma.teleReportRequest.findMany({
+                where: { status: 'completed' },
+                select: { imagingType: true },
+            });
+            if (completedRequests.length > 0) {
+                const tariffs = await this.prisma.teleReportTariff.findMany({
+                    select: { imagingType: true, price: true },
+                });
+                const tariffMap = new Map(tariffs.map((t) => [t.imagingType.trim().toLowerCase(), Number(t.price)]));
+                teleReportRevenue = completedRequests.reduce((sum, req) => {
+                    const typeKey = (req.imagingType || '').trim().toLowerCase();
+                    return sum + (tariffMap.get(typeKey) ?? 350000);
+                }, 0);
+            }
+        }
         const dailySalesData = await this.getDailySales();
         const monthlySalesData = await this.getMonthlySales();
         const yearlySalesData = await this.getYearlySales();
@@ -141,14 +156,21 @@ let AdminDashboardController = class AdminDashboardController {
                 status: 'new',
                 createdAt: u.createdAt,
             })),
-        ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 8);
+            ...recentNotifications.map((n) => ({
+                type: 'notification',
+                title: n.title,
+                description: n.message.slice(0, 80),
+                status: n.status,
+                createdAt: n.createdAt,
+            })),
+        ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 10);
         return {
             stats: {
                 users: totalUsers,
                 doctors: totalDoctors,
                 radiologists: totalRadiologists,
-                centers: centers.length,
-                organizations: 0,
+                centers: totalCenters,
+                organizations: totalOrganizations,
                 orders: totalOrders,
                 requests: totalRequests,
                 reports: totalReports,
@@ -171,6 +193,7 @@ let AdminDashboardController = class AdminDashboardController {
                 yearly: yearlySalesData,
             },
             activities,
+            notifications: recentNotifications,
         };
     }
     async getDailySales() {

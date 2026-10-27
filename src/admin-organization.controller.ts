@@ -168,7 +168,17 @@ export class AdminOrganizationController {
             center: { select: { id: true, name: true, slug: true } },
           },
         },
-        _count: { select: { contracts: true } },
+        users: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            role: true,
+            status: true,
+            createdAt: true,
+          },
+        },
+        _count: { select: { contracts: true, users: true } },
       },
     });
 
@@ -344,4 +354,178 @@ export class AdminOrganizationController {
     await this.prisma.organizationContract.delete({ where: { id: contractId } });
     return { ok: true };
   }
+
+  // ── Organization Users ──
+
+  @Get(':id/users')
+  async listOrgUsers(@Headers('authorization') auth: string, @Param('id') id: string) {
+    verifyAdmin(auth);
+
+    const org = await this.prisma.organization.findUnique({ where: { id } });
+    if (!org) throw new NotFoundException('سازمان یافت نشد');
+
+    return this.prisma.user.findMany({
+      where: { organizationId: id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+        status: true,
+        country: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  @Patch(':id/users/:userId')
+  async assignUserToOrg(
+    @Headers('authorization') auth: string,
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body() body: { role?: string },
+  ) {
+    verifyAdmin(auth);
+
+    const org = await this.prisma.organization.findUnique({ where: { id } });
+    if (!org) throw new NotFoundException('سازمان یافت نشد');
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('کاربر یافت نشد');
+
+    const data: Record<string, unknown> = { organizationId: id };
+    if (body.role && ['ORG_ADMIN', 'ORG_STAFF', 'user'].includes(body.role)) {
+      data.role = body.role;
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+        organizationId: true,
+      },
+    });
+  }
+
+  @Delete(':id/users/:userId')
+  async removeUserFromOrg(
+    @Headers('authorization') auth: string,
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
+    verifyAdmin(auth);
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('کاربر یافت نشد');
+    if (user.organizationId !== id) throw new BadRequestException('این کاربر به این سازمان متصل نیست');
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { organizationId: null },
+      select: { id: true, fullName: true, organizationId: true },
+    });
+  }
+
+  // ── Aggregated Requests Report (گزارش تجمیعی درخواست‌های سازمان) ──
+
+  @Get(':id/requests-report')
+  async getOrganizationRequestsReport(@Headers('authorization') auth: string, @Param('id') id: string) {
+    verifyAdmin(auth);
+
+    const org = await this.prisma.organization.findUnique({
+      where: { id },
+      include: {
+        users: { select: { id: true, fullName: true, email: true } },
+      },
+    });
+    if (!org) throw new NotFoundException('سازمان یافت نشد');
+
+    const userIds = org.users.map((u) => u.id);
+
+    const where: Prisma.TeleReportRequestWhereInput = {
+      userId: { in: userIds },
+    };
+
+    const [
+      totalRequests,
+      newCount,
+      assignedCount,
+      inProgressCount,
+      completedCount,
+      cancelledCount,
+      requests,
+    ] = await Promise.all([
+      this.prisma.teleReportRequest.count({ where }),
+      this.prisma.teleReportRequest.count({ where: { ...where, status: 'new' } }),
+      this.prisma.teleReportRequest.count({ where: { ...where, status: 'assigned' } }),
+      this.prisma.teleReportRequest.count({ where: { ...where, status: 'in_progress' } }),
+      this.prisma.teleReportRequest.count({ where: { ...where, status: 'completed' } }),
+      this.prisma.teleReportRequest.count({ where: { ...where, status: 'cancelled' } }),
+      this.prisma.teleReportRequest.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+        include: {
+          user: { select: { id: true, fullName: true, email: true } },
+          reports: {
+            select: {
+              id: true,
+              status: true,
+              signed: true,
+              author: { select: { fullName: true } },
+            },
+          },
+        },
+      }),
+    ]);
+
+    // Group by imagingType
+    const byImagingType: Record<string, number> = {};
+    for (const r of requests) {
+      const type = r.imagingType || 'نامشخص';
+      byImagingType[type] = (byImagingType[type] ?? 0) + 1;
+    }
+
+    return {
+      organization: {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        type: org.type,
+        userCount: org.users.length,
+      },
+      summary: {
+        total: totalRequests,
+        byStatus: {
+          new: newCount,
+          assigned: assignedCount,
+          in_progress: inProgressCount,
+          completed: completedCount,
+          cancelled: cancelledCount,
+        },
+        byImagingType,
+      },
+      requests: requests.map((r) => ({
+        id: r.id,
+        requestNumber: r.requestNumber,
+        patientName: `${r.patientFirstName} ${r.patientLastName}`.trim(),
+        nationalId: r.nationalId,
+        phone: r.phone,
+        imagingType: r.imagingType,
+        imagingArea: r.imagingArea,
+        status: r.status,
+        createdAt: r.createdAt,
+        submittedBy: r.user?.fullName ?? r.user?.email ?? '—',
+        doctorName: r.reports?.[0]?.author?.fullName ?? 'تعیین نشده',
+        reportStatus: r.reports?.[0]?.status ?? 'بدون گزارش',
+      })),
+    };
+  }
 }
+

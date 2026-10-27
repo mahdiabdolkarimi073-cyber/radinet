@@ -443,7 +443,17 @@ let AdminOrganizationController = class AdminOrganizationController {
                         center: { select: { id: true, name: true, slug: true } },
                     },
                 },
-                _count: { select: { contracts: true } },
+                users: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        email: true,
+                        role: true,
+                        status: true,
+                        createdAt: true,
+                    },
+                },
+                _count: { select: { contracts: true, users: true } },
             },
         });
         if (!org)
@@ -601,6 +611,144 @@ let AdminOrganizationController = class AdminOrganizationController {
         await this.prisma.organizationContract.delete({ where: { id: contractId } });
         return { ok: true };
     }
+    // ── Organization Users ──
+    async listOrgUsers(auth, id) {
+        verifyAdmin(auth);
+        const org = await this.prisma.organization.findUnique({ where: { id } });
+        if (!org)
+            throw new common_1.NotFoundException('سازمان یافت نشد');
+        return this.prisma.user.findMany({
+            where: { organizationId: id },
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                fullName: true,
+                email: true,
+                role: true,
+                status: true,
+                country: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+    }
+    async assignUserToOrg(auth, id, userId, body) {
+        verifyAdmin(auth);
+        const org = await this.prisma.organization.findUnique({ where: { id } });
+        if (!org)
+            throw new common_1.NotFoundException('سازمان یافت نشد');
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user)
+            throw new common_1.NotFoundException('کاربر یافت نشد');
+        const data = { organizationId: id };
+        if (body.role && ['ORG_ADMIN', 'ORG_STAFF', 'user'].includes(body.role)) {
+            data.role = body.role;
+        }
+        return this.prisma.user.update({
+            where: { id: userId },
+            data,
+            select: {
+                id: true,
+                fullName: true,
+                email: true,
+                role: true,
+                organizationId: true,
+            },
+        });
+    }
+    async removeUserFromOrg(auth, id, userId) {
+        verifyAdmin(auth);
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user)
+            throw new common_1.NotFoundException('کاربر یافت نشد');
+        if (user.organizationId !== id)
+            throw new common_1.BadRequestException('این کاربر به این سازمان متصل نیست');
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { organizationId: null },
+            select: { id: true, fullName: true, organizationId: true },
+        });
+    }
+    // ── Aggregated Requests Report (گزارش تجمیعی درخواست‌های سازمان) ──
+    async getOrganizationRequestsReport(auth, id) {
+        verifyAdmin(auth);
+        const org = await this.prisma.organization.findUnique({
+            where: { id },
+            include: {
+                users: { select: { id: true, fullName: true, email: true } },
+            },
+        });
+        if (!org)
+            throw new common_1.NotFoundException('سازمان یافت نشد');
+        const userIds = org.users.map((u) => u.id);
+        const where = {
+            userId: { in: userIds },
+        };
+        const [totalRequests, newCount, assignedCount, inProgressCount, completedCount, cancelledCount, requests,] = await Promise.all([
+            this.prisma.teleReportRequest.count({ where }),
+            this.prisma.teleReportRequest.count({ where: { ...where, status: 'new' } }),
+            this.prisma.teleReportRequest.count({ where: { ...where, status: 'assigned' } }),
+            this.prisma.teleReportRequest.count({ where: { ...where, status: 'in_progress' } }),
+            this.prisma.teleReportRequest.count({ where: { ...where, status: 'completed' } }),
+            this.prisma.teleReportRequest.count({ where: { ...where, status: 'cancelled' } }),
+            this.prisma.teleReportRequest.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                take: 50,
+                include: {
+                    user: { select: { id: true, fullName: true, email: true } },
+                    reports: {
+                        select: {
+                            id: true,
+                            status: true,
+                            signed: true,
+                            author: { select: { fullName: true } },
+                        },
+                    },
+                },
+            }),
+        ]);
+        // Group by imagingType
+        const byImagingType = {};
+        for (const r of requests) {
+            const type = r.imagingType || 'نامشخص';
+            byImagingType[type] = (byImagingType[type] ?? 0) + 1;
+        }
+        return {
+            organization: {
+                id: org.id,
+                name: org.name,
+                slug: org.slug,
+                type: org.type,
+                userCount: org.users.length,
+            },
+            summary: {
+                total: totalRequests,
+                byStatus: {
+                    new: newCount,
+                    assigned: assignedCount,
+                    in_progress: inProgressCount,
+                    completed: completedCount,
+                    cancelled: cancelledCount,
+                },
+                byImagingType,
+            },
+            requests: requests.map((r) => ({
+                id: r.id,
+                requestNumber: r.requestNumber,
+                patientName: `${r.patientFirstName} ${r.patientLastName}`.trim(),
+                nationalId: r.nationalId,
+                phone: r.phone,
+                imagingType: r.imagingType,
+                imagingArea: r.imagingArea,
+                status: r.status,
+                createdAt: r.createdAt,
+                submittedBy: r.user?.fullName ?? r.user?.email ?? '—',
+                doctorName: r.reports?.[0]?.author?.fullName ?? 'تعیین نشده',
+                reportStatus: r.reports?.[0]?.status ?? 'بدون گزارش',
+            })),
+        };
+    }
 };
 exports.AdminOrganizationController = AdminOrganizationController;
 __decorate([
@@ -680,6 +828,41 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", Promise)
 ], AdminOrganizationController.prototype, "deleteContract", null);
+__decorate([
+    (0, common_1.Get)(':id/users'),
+    __param(0, (0, common_1.Headers)('authorization')),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], AdminOrganizationController.prototype, "listOrgUsers", null);
+__decorate([
+    (0, common_1.Patch)(':id/users/:userId'),
+    __param(0, (0, common_1.Headers)('authorization')),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Param)('userId')),
+    __param(3, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminOrganizationController.prototype, "assignUserToOrg", null);
+__decorate([
+    (0, common_1.Delete)(':id/users/:userId'),
+    __param(0, (0, common_1.Headers)('authorization')),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", Promise)
+], AdminOrganizationController.prototype, "removeUserFromOrg", null);
+__decorate([
+    (0, common_1.Get)(':id/requests-report'),
+    __param(0, (0, common_1.Headers)('authorization')),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], AdminOrganizationController.prototype, "getOrganizationRequestsReport", null);
 exports.AdminOrganizationController = AdminOrganizationController = __decorate([
     (0, common_1.Controller)('admin/organizations'),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService])
