@@ -64,6 +64,20 @@ function verifyAdmin(auth) {
         throw new common_1.UnauthorizedException('توکن نامعتبر است');
     }
 }
+const ALLOWED_USER_ROLES = [
+    'admin',
+    'radiologist',
+    'doctor',
+    'support_expert',
+    'SUPPORT_EXPERT',
+    'SUPPORT_ADMIN',
+    'SUPPORT_AGENT',
+    'ORG_ADMIN',
+    'ORG_STAFF',
+    'RADIANT_AGENCY',
+    'AGENCY_MANAGER',
+    'user',
+];
 class CreateUserDto {
 }
 __decorate([
@@ -82,7 +96,7 @@ __decorate([
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "password", void 0);
 __decorate([
-    (0, class_validator_1.IsIn)(['admin', 'radiologist', 'doctor', 'support_expert', 'SUPPORT_EXPERT', 'ORG_ADMIN', 'ORG_STAFF', 'user']),
+    (0, class_validator_1.IsIn)(ALLOWED_USER_ROLES),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "role", void 0);
 __decorate([
@@ -109,7 +123,18 @@ __decorate([
 ], UpdateUserDto.prototype, "fullName", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsIn)(['admin', 'radiologist', 'doctor', 'support_expert', 'SUPPORT_EXPERT', 'ORG_ADMIN', 'ORG_STAFF', 'user']),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateUserDto.prototype, "email", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(6),
+    __metadata("design:type", String)
+], UpdateUserDto.prototype, "password", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(ALLOWED_USER_ROLES),
     __metadata("design:type", String)
 ], UpdateUserDto.prototype, "role", void 0);
 __decorate([
@@ -169,6 +194,34 @@ let AdminUserController = class AdminUserController {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async resolveOrganizationIdForRole(role, providedOrganizationId, fullName, email) {
+        if (providedOrganizationId && providedOrganizationId.trim()) {
+            return providedOrganizationId.trim();
+        }
+        if (role !== 'ORG_ADMIN' && role !== 'ORG_STAFF') {
+            return null;
+        }
+        if (role === 'ORG_STAFF') {
+            const existingOrg = await this.prisma.organization.findFirst({
+                where: { isActive: true },
+                orderBy: { createdAt: 'asc' },
+            });
+            if (existingOrg)
+                return existingOrg.id;
+        }
+        const createdOrg = await this.prisma.organization.create({
+            data: {
+                name: `سازمان ${fullName.trim()}`,
+                slug: `org-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                type: 'company',
+                contactPerson: fullName.trim(),
+                contactEmail: email.trim().toLowerCase(),
+                email: email.trim().toLowerCase(),
+                isActive: true,
+            },
+        });
+        return createdOrg.id;
+    }
     async listUsers(auth, query) {
         verifyAdmin(auth);
         const page = Math.max(Number.parseInt(query.page ?? '1', 10) || 1, 1);
@@ -176,6 +229,8 @@ let AdminUserController = class AdminUserController {
         const where = {};
         if (query.role && query.role !== 'all')
             where.role = query.role;
+        if (query.country && query.country !== 'all')
+            where.country = query.country;
         if (query.status && query.status !== 'all') {
             where.status = query.status;
         }
@@ -200,6 +255,10 @@ let AdminUserController = class AdminUserController {
                     role: true,
                     status: true,
                     country: true,
+                    organizationId: true,
+                    imagingCenterId: true,
+                    organization: { select: { id: true, name: true, slug: true } },
+                    imagingCenter: { select: { id: true, name: true, slug: true } },
                     createdAt: true,
                     updatedAt: true,
                     _count: {
@@ -329,19 +388,23 @@ let AdminUserController = class AdminUserController {
     }
     async createUser(auth, dto) {
         verifyAdmin(auth);
-        const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+        const normalizedEmail = dto.email.trim().toLowerCase();
+        const existing = await this.prisma.user.findFirst({
+            where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
+        });
         if (existing)
             throw new common_1.BadRequestException('این ایمیل قبلاً ثبت شده است');
+        const organizationId = await this.resolveOrganizationIdForRole(dto.role, dto.organizationId, dto.fullName, normalizedEmail);
         const passwordHash = await bcrypt.hash(dto.password, 10);
         const user = await this.prisma.user.create({
             data: {
-                fullName: dto.fullName,
-                email: dto.email,
+                fullName: dto.fullName.trim(),
+                email: normalizedEmail,
                 passwordHash,
                 role: dto.role,
                 country: dto.country ?? 'IR',
                 status: 'active',
-                organizationId: dto.organizationId || null,
+                organizationId,
                 imagingCenterId: dto.imagingCenterId || null,
             },
             select: {
@@ -365,15 +428,32 @@ let AdminUserController = class AdminUserController {
             throw new common_1.NotFoundException('کاربر یافت نشد');
         const data = {};
         if (dto.fullName !== undefined)
-            data.fullName = dto.fullName;
+            data.fullName = dto.fullName.trim();
+        if (dto.email !== undefined) {
+            const normalizedEmail = dto.email.trim().toLowerCase();
+            const emailExists = await this.prisma.user.findFirst({
+                where: { email: { equals: normalizedEmail, mode: 'insensitive' }, id: { not: id } },
+            });
+            if (emailExists)
+                throw new common_1.BadRequestException('این ایمیل قبلاً ثبت شده است');
+            data.email = normalizedEmail;
+        }
+        if (dto.password !== undefined && dto.password.trim()) {
+            data.passwordHash = await bcrypt.hash(dto.password, 10);
+        }
         if (dto.role !== undefined)
             data.role = dto.role;
         if (dto.country !== undefined)
             data.country = dto.country;
         if (dto.status !== undefined)
             data.status = dto.status;
-        if (dto.organizationId !== undefined)
+        const targetRole = dto.role ?? user.role;
+        if (dto.organizationId !== undefined) {
             data.organizationId = dto.organizationId || null;
+        }
+        else if ((targetRole === 'ORG_ADMIN' || targetRole === 'ORG_STAFF') && !user.organizationId) {
+            data.organizationId = await this.resolveOrganizationIdForRole(targetRole, null, (dto.fullName ?? user.fullName).trim(), user.email);
+        }
         if (dto.imagingCenterId !== undefined)
             data.imagingCenterId = dto.imagingCenterId || null;
         return this.prisma.user.update({

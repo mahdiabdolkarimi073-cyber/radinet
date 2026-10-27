@@ -30,11 +30,33 @@ type AuthUser = {
   fullName: string;
   email: string;
   role: string;
+  organizationId?: string | null;
 };
+
+const ALLOWED_LOGIN_ROLES = new Set([
+  'admin',
+  'radiologist',
+  'doctor',
+  'support_expert',
+  'SUPPORT_EXPERT',
+  'SUPPORT_ADMIN',
+  'SUPPORT_AGENT',
+  'ORG_ADMIN',
+  'ORG_STAFF',
+  'RADIANT_AGENCY',
+  'AGENCY_MANAGER',
+  'user',
+]);
 
 function signToken(user: AuthUser): string {
   return jwt.sign(
-    { sub: user.id, email: user.email, role: user.role, name: user.fullName },
+    {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.fullName,
+      ...(user.organizationId ? { organizationId: user.organizationId } : {}),
+    },
     JWT_SECRET,
     { expiresIn: TOKEN_TTL },
   );
@@ -46,8 +68,9 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() body: RegisterDto) {
-    const existing = await this.prisma.user.findUnique({
-      where: { email: body.email },
+    const normalizedEmail = body.email.trim().toLowerCase();
+    const existing = await this.prisma.user.findFirst({
+      where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
     });
     if (existing) {
       return { ok: false, error: 'این ایمیل قبلاً ثبت شده است. وارد شوید.' };
@@ -56,8 +79,8 @@ export class AuthController {
     const passwordHash = await bcrypt.hash(body.password, 10);
     const user = await this.prisma.user.create({
       data: {
-        fullName: body.fullName,
-        email: body.email,
+        fullName: body.fullName.trim(),
+        email: normalizedEmail,
         passwordHash,
         role: 'radiologist',
       },
@@ -68,6 +91,7 @@ export class AuthController {
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+      organizationId: user.organizationId,
     });
 
     return {
@@ -78,25 +102,34 @@ export class AuthController {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+        organizationId: user.organizationId,
       },
     };
   }
 
   @Post('login')
   async login(@Body() body: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: body.email },
+    const normalizedEmail = body.email.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
     });
     if (!user) {
       return { ok: false, error: 'ایمیل یا رمز عبور اشتباه است' };
     }
 
-    const valid = await bcrypt.compare(body.password, user.passwordHash);
+    let valid = await bcrypt.compare(body.password, user.passwordHash);
+    if (!valid && body.password.trim() !== body.password) {
+      valid = await bcrypt.compare(body.password.trim(), user.passwordHash);
+    }
     if (!valid) {
       return { ok: false, error: 'ایمیل یا رمز عبور اشتباه است' };
     }
 
-    if (user.role !== 'radiologist' && user.role !== 'admin' && user.role !== 'SUPPORT_EXPERT' && user.role !== 'support_expert' && user.role !== 'user' && user.role !== 'ORG_ADMIN' && user.role !== 'ORG_STAFF') {
+    if (user.status === 'inactive' || user.status === 'suspended') {
+      return { ok: false, error: 'حساب کاربری شما غیرفعال یا معلق است' };
+    }
+
+    if (!ALLOWED_LOGIN_ROLES.has(user.role)) {
       return { ok: false, error: 'دسترسی مجاز نیست' };
     }
 
@@ -105,6 +138,7 @@ export class AuthController {
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+      organizationId: user.organizationId,
     });
 
     return {
@@ -115,6 +149,7 @@ export class AuthController {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+        organizationId: user.organizationId,
       },
     };
   }
@@ -146,6 +181,7 @@ export class AuthController {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+        organizationId: user.organizationId,
       },
     };
   }

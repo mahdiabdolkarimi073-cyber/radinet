@@ -45,12 +45,19 @@ exports.verifySocketSupport = verifySocketSupport;
 const common_1 = require("@nestjs/common");
 const jwt = __importStar(require("jsonwebtoken"));
 const JWT_SECRET = process.env.JWT_SECRET ?? 'radinet-dev-secret-change-me';
+const ALLOWED_SUPPORT_ROLES = new Set([
+    'SUPPORT_EXPERT',
+    'support_expert',
+    'SUPPORT_ADMIN',
+    'SUPPORT_AGENT',
+    'admin',
+]);
 function verifySupportToken(auth) {
     if (!auth?.startsWith('Bearer '))
         throw new common_1.UnauthorizedException('توکن ارسال نشده است');
     try {
         const payload = jwt.verify(auth.slice('Bearer '.length), JWT_SECRET);
-        if (payload.role !== 'SUPPORT_EXPERT' && payload.role !== 'support_expert') {
+        if (!ALLOWED_SUPPORT_ROLES.has(String(payload.role))) {
             throw new common_1.UnauthorizedException('دسترسی فقط برای کارشناس پشتیبانی مجاز است');
         }
         if (typeof payload.sub !== 'string' || typeof payload.email !== 'string') {

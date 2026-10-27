@@ -79,16 +79,37 @@ __decorate([
     (0, class_validator_1.MinLength)(6),
     __metadata("design:type", String)
 ], LoginDto.prototype, "password", void 0);
+const ALLOWED_LOGIN_ROLES = new Set([
+    'admin',
+    'radiologist',
+    'doctor',
+    'support_expert',
+    'SUPPORT_EXPERT',
+    'SUPPORT_ADMIN',
+    'SUPPORT_AGENT',
+    'ORG_ADMIN',
+    'ORG_STAFF',
+    'RADIANT_AGENCY',
+    'AGENCY_MANAGER',
+    'user',
+]);
 function signToken(user) {
-    return jwt.sign({ sub: user.id, email: user.email, role: user.role, name: user.fullName }, JWT_SECRET, { expiresIn: TOKEN_TTL });
+    return jwt.sign({
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.fullName,
+        ...(user.organizationId ? { organizationId: user.organizationId } : {}),
+    }, JWT_SECRET, { expiresIn: TOKEN_TTL });
 }
 let AuthController = class AuthController {
     constructor(prisma) {
         this.prisma = prisma;
     }
     async register(body) {
-        const existing = await this.prisma.user.findUnique({
-            where: { email: body.email },
+        const normalizedEmail = body.email.trim().toLowerCase();
+        const existing = await this.prisma.user.findFirst({
+            where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
         });
         if (existing) {
             return { ok: false, error: 'این ایمیل قبلاً ثبت شده است. وارد شوید.' };
@@ -96,8 +117,8 @@ let AuthController = class AuthController {
         const passwordHash = await bcrypt.hash(body.password, 10);
         const user = await this.prisma.user.create({
             data: {
-                fullName: body.fullName,
-                email: body.email,
+                fullName: body.fullName.trim(),
+                email: normalizedEmail,
                 passwordHash,
                 role: 'radiologist',
             },
@@ -107,6 +128,7 @@ let AuthController = class AuthController {
             fullName: user.fullName,
             email: user.email,
             role: user.role,
+            organizationId: user.organizationId,
         });
         return {
             ok: true,
@@ -116,21 +138,29 @@ let AuthController = class AuthController {
                 email: user.email,
                 fullName: user.fullName,
                 role: user.role,
+                organizationId: user.organizationId,
             },
         };
     }
     async login(body) {
-        const user = await this.prisma.user.findUnique({
-            where: { email: body.email },
+        const normalizedEmail = body.email.trim().toLowerCase();
+        const user = await this.prisma.user.findFirst({
+            where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
         });
         if (!user) {
             return { ok: false, error: 'ایمیل یا رمز عبور اشتباه است' };
         }
-        const valid = await bcrypt.compare(body.password, user.passwordHash);
+        let valid = await bcrypt.compare(body.password, user.passwordHash);
+        if (!valid && body.password.trim() !== body.password) {
+            valid = await bcrypt.compare(body.password.trim(), user.passwordHash);
+        }
         if (!valid) {
             return { ok: false, error: 'ایمیل یا رمز عبور اشتباه است' };
         }
-        if (user.role !== 'radiologist' && user.role !== 'admin' && user.role !== 'SUPPORT_EXPERT' && user.role !== 'support_expert' && user.role !== 'user' && user.role !== 'ORG_ADMIN' && user.role !== 'ORG_STAFF') {
+        if (user.status === 'inactive' || user.status === 'suspended') {
+            return { ok: false, error: 'حساب کاربری شما غیرفعال یا معلق است' };
+        }
+        if (!ALLOWED_LOGIN_ROLES.has(user.role)) {
             return { ok: false, error: 'دسترسی مجاز نیست' };
         }
         const token = signToken({
@@ -138,6 +168,7 @@ let AuthController = class AuthController {
             fullName: user.fullName,
             email: user.email,
             role: user.role,
+            organizationId: user.organizationId,
         });
         return {
             ok: true,
@@ -147,6 +178,7 @@ let AuthController = class AuthController {
                 email: user.email,
                 fullName: user.fullName,
                 role: user.role,
+                organizationId: user.organizationId,
             },
         };
     }
@@ -175,6 +207,7 @@ let AuthController = class AuthController {
                 email: user.email,
                 fullName: user.fullName,
                 role: user.role,
+                organizationId: user.organizationId,
             },
         };
     }

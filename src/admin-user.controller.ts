@@ -30,11 +30,26 @@ function verifyAdmin(auth?: string) {
   }
 }
 
+const ALLOWED_USER_ROLES = [
+  'admin',
+  'radiologist',
+  'doctor',
+  'support_expert',
+  'SUPPORT_EXPERT',
+  'SUPPORT_ADMIN',
+  'SUPPORT_AGENT',
+  'ORG_ADMIN',
+  'ORG_STAFF',
+  'RADIANT_AGENCY',
+  'AGENCY_MANAGER',
+  'user',
+] as const;
+
 class CreateUserDto {
   @IsString() @MinLength(2) fullName!: string;
   @IsString() @MinLength(3) email!: string;
   @IsString() @MinLength(6) password!: string;
-  @IsIn(['admin', 'radiologist', 'doctor', 'support_expert', 'SUPPORT_EXPERT', 'ORG_ADMIN', 'ORG_STAFF', 'user']) role!: string;
+  @IsIn(ALLOWED_USER_ROLES) role!: string;
   @IsOptional() @IsString() country?: string;
   @IsOptional() @IsString() organizationId?: string;
   @IsOptional() @IsString() imagingCenterId?: string;
@@ -42,7 +57,9 @@ class CreateUserDto {
 
 class UpdateUserDto {
   @IsOptional() @IsString() fullName?: string;
-  @IsOptional() @IsIn(['admin', 'radiologist', 'doctor', 'support_expert', 'SUPPORT_EXPERT', 'ORG_ADMIN', 'ORG_STAFF', 'user']) role?: string;
+  @IsOptional() @IsString() email?: string;
+  @IsOptional() @IsString() @MinLength(6) password?: string;
+  @IsOptional() @IsIn(ALLOWED_USER_ROLES) role?: string;
   @IsOptional() @IsString() country?: string;
   @IsOptional() @IsString() status?: string;
   @IsOptional() @IsString() organizationId?: string;
@@ -64,6 +81,39 @@ const bcrypt = require('bcryptjs');
 export class AdminUserController {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async resolveOrganizationIdForRole(
+    role: string,
+    providedOrganizationId: string | undefined | null,
+    fullName: string,
+    email: string,
+  ): Promise<string | null> {
+    if (providedOrganizationId && providedOrganizationId.trim()) {
+      return providedOrganizationId.trim();
+    }
+    if (role !== 'ORG_ADMIN' && role !== 'ORG_STAFF') {
+      return null;
+    }
+    if (role === 'ORG_STAFF') {
+      const existingOrg = await this.prisma.organization.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (existingOrg) return existingOrg.id;
+    }
+    const createdOrg = await this.prisma.organization.create({
+      data: {
+        name: `سازمان ${fullName.trim()}`,
+        slug: `org-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        type: 'company',
+        contactPerson: fullName.trim(),
+        contactEmail: email.trim().toLowerCase(),
+        email: email.trim().toLowerCase(),
+        isActive: true,
+      },
+    });
+    return createdOrg.id;
+  }
+
   @Get()
   async listUsers(@Headers('authorization') auth: string, @Query() query: UserQueryDto) {
     verifyAdmin(auth);
@@ -73,6 +123,7 @@ export class AdminUserController {
 
     const where: Prisma.UserWhereInput = {};
     if (query.role && query.role !== 'all') where.role = query.role;
+    if (query.country && query.country !== 'all') where.country = query.country;
     if (query.status && query.status !== 'all') {
       where.status = query.status;
     }
@@ -98,6 +149,10 @@ export class AdminUserController {
           role: true,
           status: true,
           country: true,
+          organizationId: true,
+          imagingCenterId: true,
+          organization: { select: { id: true, name: true, slug: true } },
+          imagingCenter: { select: { id: true, name: true, slug: true } },
           createdAt: true,
           updatedAt: true,
           _count: {
@@ -236,19 +291,29 @@ export class AdminUserController {
   async createUser(@Headers('authorization') auth: string, @Body() dto: CreateUserDto) {
     verifyAdmin(auth);
 
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    const existing = await this.prisma.user.findFirst({
+      where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
+    });
     if (existing) throw new BadRequestException('این ایمیل قبلاً ثبت شده است');
+
+    const organizationId = await this.resolveOrganizationIdForRole(
+      dto.role,
+      dto.organizationId,
+      dto.fullName,
+      normalizedEmail,
+    );
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = await this.prisma.user.create({
       data: {
-        fullName: dto.fullName,
-        email: dto.email,
+        fullName: dto.fullName.trim(),
+        email: normalizedEmail,
         passwordHash,
         role: dto.role,
         country: dto.country ?? 'IR',
         status: 'active',
-        organizationId: dto.organizationId || null,
+        organizationId,
         imagingCenterId: dto.imagingCenterId || null,
       },
       select: {
@@ -275,11 +340,34 @@ export class AdminUserController {
     if (!user) throw new NotFoundException('کاربر یافت نشد');
 
     const data: Record<string, unknown> = {};
-    if (dto.fullName !== undefined) data.fullName = dto.fullName;
+    if (dto.fullName !== undefined) data.fullName = dto.fullName.trim();
+    if (dto.email !== undefined) {
+      const normalizedEmail = dto.email.trim().toLowerCase();
+      const emailExists = await this.prisma.user.findFirst({
+        where: { email: { equals: normalizedEmail, mode: 'insensitive' }, id: { not: id } },
+      });
+      if (emailExists) throw new BadRequestException('این ایمیل قبلاً ثبت شده است');
+      data.email = normalizedEmail;
+    }
+    if (dto.password !== undefined && dto.password.trim()) {
+      data.passwordHash = await bcrypt.hash(dto.password, 10);
+    }
     if (dto.role !== undefined) data.role = dto.role;
     if (dto.country !== undefined) data.country = dto.country;
     if (dto.status !== undefined) data.status = dto.status;
-    if (dto.organizationId !== undefined) data.organizationId = dto.organizationId || null;
+
+    const targetRole = dto.role ?? user.role;
+    if (dto.organizationId !== undefined) {
+      data.organizationId = dto.organizationId || null;
+    } else if ((targetRole === 'ORG_ADMIN' || targetRole === 'ORG_STAFF') && !user.organizationId) {
+      data.organizationId = await this.resolveOrganizationIdForRole(
+        targetRole,
+        null,
+        (dto.fullName ?? user.fullName).trim(),
+        user.email,
+      );
+    }
+
     if (dto.imagingCenterId !== undefined) data.imagingCenterId = dto.imagingCenterId || null;
 
     return this.prisma.user.update({
